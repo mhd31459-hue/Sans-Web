@@ -6,6 +6,10 @@ import { prime } from "./adapters/prime.js";
 import { disney } from "./adapters/disney.js";
 import { API } from "./config.js";
 
+// The config ships with a placeholder. Until it's replaced, make NO network requests —
+// otherwise caption text gets posted to an address nobody controls.
+const API_READY = !/YOUR-PROJECT/i.test(API);
+
 const adapter = [prime, disney].find(a => a.matches(location));
 const state = { segments: [], prefs: DEFAULT_PREFS, cues: [], titleId: null, cover: null, weMuted: false };
 window.__sansDebug = state;
@@ -55,8 +59,9 @@ function watchCaptions() {
 }
 
 async function loadMap() {
+  state.segments = [];
   state.titleId = adapter.titleId(location);
-  if (!state.titleId) return;
+  if (!state.titleId || !API_READY) return;
   try {
     const r = await fetch(`${API}/map?service=${adapter.name}&title=${encodeURIComponent(state.titleId)}`);
     if (r.ok) state.segments = normalize((await r.json()).segments || []);
@@ -65,6 +70,7 @@ async function loadMap() {
 
 // When enough captions are collected and no AI draft exists yet, ask for one.
 async function submitCuesForDraft() {
+  if (!API_READY || !state.titleId) return;
   if (state.cues.length < 30 || state.segments.some(s => s.source === "ai")) return;
   const cues = state.cues.splice(0);
   try {
@@ -81,5 +87,14 @@ if (adapter) {
   watchCaptions();
   setInterval(tick, 100);                 // 100ms: fine enough for mute/skip boundaries
   setInterval(submitCuesForDraft, 120000);
-  addEventListener("popstate", loadMap);  // both services navigate client-side
+  // Both services navigate client-side with pushState, which fires no event. Poll the
+  // URL; on a title change, reload the map and DROP collected captions so one title's
+  // captions never end up drafting another title's map.
+  let lastHref = location.href;
+  setInterval(() => {
+    if (location.href === lastHref) return;
+    lastHref = location.href;
+    const next = adapter.titleId(location);
+    if (next !== state.titleId) { state.cues = []; loadMap(); }
+  }, 500);
 }

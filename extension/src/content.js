@@ -50,7 +50,12 @@ function tick() {
 function watchCaptions() {
   let last = "";
   new MutationObserver(() => {
-    const text = [...document.querySelectorAll(adapter.captionSelector)].map(n => n.textContent.trim()).join(" ").trim();
+    // innerText, not textContent: captions wrap onto two lines, and textContent drops the
+    // break — observed on Prime as "passinghas", "armiesacross". A word fused to its
+    // neighbour defeats the profanity matcher's word boundaries, so a swear word at a
+    // line end would slip through.
+    const text = [...document.querySelectorAll(adapter.captionSelector)]
+      .map(n => n.innerText).join(" ").replace(/\s+/g, " ").trim();
     const v = mainVideo();
     if (!text || text === last || !v) return;
     last = text;

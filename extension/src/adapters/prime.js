@@ -6,7 +6,10 @@ export const prime = {
   matches: (loc) => /primevideo\.com|amazon\.[a-z.]+\/(gp\/video|.*\/dp\/)/.test(loc.href),
   // The service's own stable ID for the title; maps are keyed on it.
   titleId(loc) {
-    const m = loc.href.match(/\/(?:detail|dp)\/([A-Z0-9]{10})/i) || loc.href.match(/gti=([^&]+)/);
+    // Prime Video IDs are longer than classic 10-char ASINs (seen: 0GRF975ZA7Z9A9...),
+    // so take the whole path segment rather than truncating — truncation could make two
+    // titles share a map.
+    const m = loc.href.match(/\/(?:detail|dp)\/([A-Z0-9]+)/i) || loc.href.match(/gti=([^&]+)/);
     return m ? m[1] : null;
   },
   captionSelector: ".atvwebplayersdk-captions-text",

@@ -7,7 +7,10 @@
 // ("[moaning]", "[gunshot]"), then marked 'draft' for people to confirm or correct.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
-const PROFANITY = /\b(fuck\w*|shit\w*|bitch\w*|cunt|asshole|bastard|motherfuck\w*|dick|cock|pussy|goddamn\w*|damn\w*)\b/i;
+// \w* on BOTH sides of the strong roots: a leading \b alone missed compounds like
+// "bullshit", "horseshit", "dipshit", "motherfucker". Short words (dick, cock, damn)
+// keep strict boundaries so "dickens", "cockpit", "damnation"-style words don't fire.
+const PROFANITY = /\b(\w*fuck\w*|\w*shit\w*|bitch\w*|cunt\w*|\w*asshole\w*|bastard\w*|dick|dicks|cock|cocks|pussy|goddamn\w*|damn|damned|damnit)\b/i;
 const MODEL = "claude-haiku-5-5";   // cheap enough to draft every title anyone watches
 
 type Cue = { t: number; text: string };

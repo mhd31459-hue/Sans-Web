@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Sans — community content filters",
+  "version": "0.1.0",
+  "description": "Mutes, skips, or covers scenes on Prime Video and Disney+ using community-made timestamp maps. Never copies or captures the video.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.functions.supabase.co/*"],
+  "content_scripts": [{
+    "matches": ["https://www.primevideo.com/*", "https://www.amazon.com/*", "https://www.disneyplus.com/*"],
+    "js": ["loader.js"],
+    "run_at": "document_idle"
+  }],
+  "web_accessible_resources": [{
+    "resources": ["src/*.js", "src/adapters/*.js"],
+    "matches": ["https://www.primevideo.com/*", "https://www.amazon.com/*", "https://www.disneyplus.com/*"]
+  }]
+}

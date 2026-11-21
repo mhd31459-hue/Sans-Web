@@ -3,8 +3,9 @@
 // Node can run it directly in tests.
 //
 // WORD-LEVEL timing: a caption cue gives a start, an end, and the line. The word's
-// time is estimated from its position in the SPOKEN part of the line, so "Get the
-// fuck down, now!" shown 10–12s mutes ~10.5–11.3s instead of the whole 2s line.
+// time is estimated from its position in the SPOKEN part of the line, between a
+// fast-speech and a whole-cue estimate, so "Get the fuck down, now!" shown 10–12s
+// mutes ~10.0–11.3s instead of the whole 2s line.
 
 // \w* on both sides of the strong roots catches compounds (bullshit, motherfucker);
 // short words that are substrings of ordinary words keep strict boundaries.

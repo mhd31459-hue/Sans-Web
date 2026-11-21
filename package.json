@@ -1,2 +1,5 @@
 { "name": "sans-web", "private": true, "type": "module",
-  "scripts": { "test": "node --test test/*.test.js" } }
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "package": "npm test && V=$(node -p \"require('./extension/manifest.json').version\") && mkdir -p dist && rm -f dist/sans-extension-$V.zip && cd extension && zip -qrX ../dist/sans-extension-$V.zip . -x '.*' -x '*/.*' && cd .. && echo dist/sans-extension-$V.zip"
+  } }

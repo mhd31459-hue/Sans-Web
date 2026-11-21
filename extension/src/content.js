@@ -101,18 +101,26 @@ function titleName() {
 }
 
 // Send cues (already on the PLAYER's clock) and apply the map the server returns.
+// One request at a time, and after a 429 (server rate limit) wait before trying again
+// rather than retrying on every 3-second sync.
+let sending = false, backoffUntil = 0;
 async function sendCues(cues) {
-  if (!API_READY || !state.titleId || !cues.length) return false;
+  if (!API_READY || !state.titleId || !cues.length || sending || Date.now() < backoffUntil) return false;
+  sending = true;
   try {
     const r = await fetch(`${API}/draft-map`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ service: adapter.name, title: state.titleId, name: titleName(), cues }),
     });
+    if (r.status === 429 || r.status === 503) {
+      backoffUntil = Date.now() + 1000 * (+r.headers.get("Retry-After") || 60);
+      return false;
+    }
     if (!r.ok) return false;
     const body = await r.json();
     if (Array.isArray(body.segments)) state.segments = normalize(body.segments);
     return true;
-  } catch { return false; }
+  } catch { return false; } finally { sending = false; }
 }
 
 // ── Caption FILE capture (reads ahead, so profanity is muted before it's spoken) ──

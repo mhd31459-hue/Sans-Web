@@ -45,7 +45,7 @@ export function profanityForCue(c: Cue, nextT?: number): Seg[] {
   const out: Seg[] = [];
   for (const m of spoken.matchAll(new RegExp(PROFANITY_SRC, "gi"))) {
     const i = m.index ?? 0;
-    let s = c.t + dur * (i / n) - PAD_BEFORE;
+    let s = c.t + Math.min(dur * (i / n), i / FAST_CPS) - PAD_BEFORE;
     let e = c.t + dur * ((i + m[0].length) / n) + PAD_AFTER;
     if (e - s < MIN_MUTE) { const mid = (s + e) / 2; s = mid - MIN_MUTE / 2; e = mid + MIN_MUTE / 2; }
     s = Math.max(0, Math.max(s, c.t - 0.3));

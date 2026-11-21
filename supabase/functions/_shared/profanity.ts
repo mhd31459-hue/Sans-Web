@@ -17,6 +17,12 @@ export type Seg = { start: number; end: number; category: string; severity: numb
 const PAD_BEFORE = 0.25;   // speech often leads the caption's character position
 const PAD_AFTER = 0.25;
 const MIN_MUTE = 0.6;      // never shorter than this — a clipped syllable still lands
+// Captions stay on screen after the speech ends, so spreading the words across the whole
+// cue places late words too LATE. Measured on a real leak: "It's kinda f— up." was shown
+// for ~2s but spoken in 0.7s (~30 chars/s), and the mute began after the word ended.
+// So the mute STARTS at the earlier of the proportional estimate and a fast-speech
+// estimate, and ENDS at the proportional (slow) one: it covers the word at any pace.
+const FAST_CPS = 28;
 
 // Text that appears in captions but is not spoken: sound cues, music, speaker tags.
 export function spokenText(text: string): string {

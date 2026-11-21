@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
   // Report database failures instead of claiming success — an earlier version returned
   // {"drafted":2} while every write was being refused for missing table grants.
   const row: Record<string, unknown> = { service, service_id: title };
-  if (name) row.name = String(name).slice(0, 200);
+  if (typeof name === "string" && name.trim()) row.name = name.trim().slice(0, 200);
   const { data: t, error: te } = await db.from("titles")
     .upsert(row, { onConflict: "service,service_id" }).select("id, ai_drafted_until").single();
   if (te || !t) return Response.json({ error: "title write failed", detail: te?.message }, { status: 500, headers: CORS });

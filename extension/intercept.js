@@ -5,6 +5,7 @@
 // arrives encrypted and is never read.
 (() => {
   if (window.__sansIntercept) return;
+  console.info("[Sans] caption catcher active in", location.href.slice(0, 80));
   const MAX = 3_000_000;
   // Diagnostics, readable from the console in the default "top" context:
   //   __sansIntercept

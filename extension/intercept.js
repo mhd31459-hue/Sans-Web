@@ -5,6 +5,11 @@
 // arrives encrypted and is never read.
 (() => {
   if (window.__sansIntercept) return;
+  // Mark the page so the extension knows the catcher is running and HOW it got here.
+  // document.currentScript is the injected <script> when the fallback loaded us, and
+  // null when Chrome ran us from the manifest. (A DOM attribute, not inline code: sites
+  // like Netflix enforce Trusted Types and refuse inline scripts outright.)
+  try { document.documentElement.dataset.sansIntercept = document.currentScript ? "injected" : "manifest"; } catch {}
   console.info("[Sans] caption catcher active in", location.href.slice(0, 80));
   const MAX = 3_000_000;
   // Diagnostics, readable from the console in the default "top" context:
@@ -38,6 +43,22 @@
   setInterval(() => {
     try { window.top.postMessage({ __sansDiag: true, diag: JSON.parse(JSON.stringify(diag)) }, location.origin); } catch {}
   }, 2000);
+
+  // Seek requests from the extension (Netflix: video.currentTime crashes its player).
+  window.addEventListener("message", (e) => {
+    if (e.source !== window || e.origin !== location.origin || !e.data?.__sansSeek) return;
+    const to = +e.data.to;
+    if (!isFinite(to) || to < 0) return;
+    try {
+      const vp = window.netflix?.appContext?.state?.playerApp?.getAPI?.()?.videoPlayer;
+      const id = vp?.getAllPlayerSessionIds?.()?.[0];
+      const player = id && vp.getVideoPlayerBySessionId(id);
+      if (player?.seek) { player.seek(Math.round(to * 1000)); diag.seeks = (diag.seeks || 0) + 1; return; }
+    } catch (err) { diag.seekError = String(err).slice(0, 120); }
+    // Other services: plain element seek is fine.
+    const v = [...document.querySelectorAll("video")].sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)[0];
+    if (v && !/netflix\.com$/.test(location.hostname)) v.currentTime = to;
+  });
 
   const origFetch = window.fetch;
   window.fetch = async function (...args) {

@@ -5,13 +5,14 @@ import { decide, DEFAULT_PREFS, normalize } from "./segments.js";
 import { parseTTML, parseVTT, looksLikeCaptions, estimateOffset } from "./captions-core.js";
 import { prime } from "./adapters/prime.js";
 import { disney } from "./adapters/disney.js";
+import { netflix } from "./adapters/netflix.js";
 import { API } from "./config.js";
 
 // The config ships with a placeholder. Until it's replaced, make NO network requests —
 // otherwise caption text gets posted to an address nobody controls.
 const API_READY = !/YOUR-PROJECT/i.test(API);
 
-const adapter = [prime, disney].find(a => a.matches(location));
+const adapter = [prime, disney, netflix].find(a => a.matches(location));
 const state = {
   segments: [], prefs: DEFAULT_PREFS, cues: [], titleId: null, cover: null, weMuted: false,
   track: [],          // cues from the caption FILE, on the file's clock
@@ -44,7 +45,17 @@ function tick() {
   const v = mainVideo();
   if (!v || !state.segments.length) return;
   const { mute, cover, skipTo } = decide(v.currentTime, state.segments, state.prefs);
-  if (skipTo !== null && skipTo > v.currentTime + 0.05) { v.currentTime = skipTo; return; }
+  if (skipTo !== null && skipTo > v.currentTime + 0.05) {
+    if (adapter.seekViaPage) {
+      // Ask the page-context script to seek with the service's own player API; don't
+      // re-ask every tick while the seek is in flight.
+      if (state.pendingSeek !== skipTo || Date.now() - state.pendingSeekAt > 1500) {
+        state.pendingSeek = skipTo; state.pendingSeekAt = Date.now();
+        window.postMessage({ __sansSeek: true, to: skipTo }, location.origin);
+      }
+    } else v.currentTime = skipTo;
+    return;
+  }
   // Only undo a mute WE applied — never unmute a viewer who muted themselves.
   if (mute && !v.muted) { v.muted = true; state.weMuted = true; }
   else if (!mute && state.weMuted) { v.muted = false; state.weMuted = false; }

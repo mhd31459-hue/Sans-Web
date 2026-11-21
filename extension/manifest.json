@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Sans \u2014 community content filters",
-  "version": "0.2.3",
-  "description": "Mutes, skips, or covers scenes on Prime Video and Disney+ using community-made timestamp maps. Never copies or captures the video.",
+  "version": "0.3.0",
+  "description": "Mutes, skips, or covers scenes on Prime Video, Disney+ and Netflix using community-made timestamp maps. Never copies or captures the video.",
   "permissions": [
     "storage"
   ],
@@ -14,7 +14,8 @@
       "matches": [
         "https://www.primevideo.com/*",
         "https://www.amazon.com/*",
-        "https://www.disneyplus.com/*"
+        "https://www.disneyplus.com/*",
+        "https://www.netflix.com/*"
       ],
       "js": [
         "intercept.js"
@@ -27,7 +28,8 @@
       "matches": [
         "https://www.primevideo.com/*",
         "https://www.amazon.com/*",
-        "https://www.disneyplus.com/*"
+        "https://www.disneyplus.com/*",
+        "https://www.netflix.com/*"
       ],
       "js": [
         "loader.js"
@@ -45,7 +47,8 @@
       "matches": [
         "https://www.primevideo.com/*",
         "https://www.amazon.com/*",
-        "https://www.disneyplus.com/*"
+        "https://www.disneyplus.com/*",
+        "https://www.netflix.com/*"
       ]
     }
   ]

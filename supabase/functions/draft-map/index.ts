@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return new Response("POST only", { status: 405, headers: CORS });
   const { service, title, cues, name } = await req.json() as { service: string; title: string; cues: Cue[]; name?: string };
-  if (!["prime", "disney"].includes(service) || !title || !Array.isArray(cues) || cues.length > 5000)
+  if (!["prime", "disney", "netflix"].includes(service) || !title || !Array.isArray(cues) || cues.length > 5000)
     return new Response("bad request", { status: 400, headers: CORS });
 
   // 1. Profanity from captions, timed to the WORD within each line (_shared/profanity.ts).

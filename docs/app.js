@@ -7,7 +7,7 @@ import { fmt, parse, esc } from "./time.js";
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 const CATS = ["profanity", "nudity", "sex", "violence"];
-const SERVICE = { prime: "Prime Video", disney: "Disney+" };
+const SERVICE = { prime: "Prime Video", disney: "Disney+", netflix: "Netflix" };
 const view = document.getElementById("view");
 let user = null;
 let myVotes = new Map();   // segment_id -> vote

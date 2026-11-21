@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sans Privacy</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="./">SANS <span>maps</span></a>
+</header>
+<main class="wrap prose">
+<h1>Privacy policy</h1>
+<p class="muted small">Sans browser extension and Sans Maps website · updated November 21, 2026</p>
+
+<h2>What the extension does</h2>
+<p>Sans mutes, skips, or covers parts of shows on Prime Video, Disney+ and Netflix using
+community-made maps of timestamps. It controls the service's own player. It never records,
+captures, copies or downloads video or audio.</p>
+
+<h2>What the extension sends</h2>
+<ul>
+  <li><strong>Which title you're watching:</strong> the service name and the title's ID from the page
+  address (for example <code>netflix</code>, <code>70251669</code>) and its displayed name, so it can fetch that title's map.</li>
+  <li><strong>Subtitle lines with their times:</strong> if subtitles are on, the extension sends the subtitle
+  text the service shows and their timestamps, so the server can work out where to mute. Subtitle text is
+  used only while handling that request and is <strong>not stored</strong>. Only the resulting facts are kept:
+  start time, end time, and category (for example "profanity, 10.4s–11.3s").</li>
+</ul>
+<p>Requests contain no name, email, account, cookies or browsing history. The extension has no
+analytics or tracking and does not read anything on sites other than the three services above.</p>
+
+<h2>Who processes it</h2>
+<ul>
+  <li><strong>Supabase</strong> hosts the database and server functions that receive these requests.</li>
+  <li><strong>Anthropic</strong> (Claude) may receive a title's subtitle lines and timestamps to draft
+  scene timestamps (for example a violent scene). Anthropic processes them under its API terms. Sans stores
+  only the timestamps it returns.</li>
+</ul>
+<p>Sans does not sell data or use it for advertising.</p>
+
+<h2>Stored on your computer</h2>
+<p>Your filter choices (mute, skip or cover for each category) are kept in Chrome's extension storage.</p>
+
+<h2>Website accounts</h2>
+<p>Browsing maps needs no account. If you sign in to vote on or correct maps, your email address is
+stored by Supabase to sign you in, and your votes and edits are linked to your account. Email addresses
+aren't shown publicly.</p>
+
+<h2>Contact</h2>
+<p>Questions or deletion requests: open an issue at
+<a href="https://github.com/mhd31459-hue/Sans-Web/issues">github.com/mhd31459-hue/Sans-Web</a>.</p>
+</main>
+</body>
+</html>

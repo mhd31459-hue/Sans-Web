@@ -2,6 +2,7 @@
 // title, and applies it by MUTING, SEEKING, or COVERING the player — the same controls
 // a viewer has. It never reads, captures, copies, or decrypts the video.
 import { decide, DEFAULT_PREFS, normalize } from "./segments.js";
+import { parseTTML, parseVTT, looksLikeCaptions, estimateOffset } from "./captions-core.js";
 import { prime } from "./adapters/prime.js";
 import { disney } from "./adapters/disney.js";
 import { API } from "./config.js";
@@ -11,7 +12,13 @@ import { API } from "./config.js";
 const API_READY = !/YOUR-PROJECT/i.test(API);
 
 const adapter = [prime, disney].find(a => a.matches(location));
-const state = { segments: [], prefs: DEFAULT_PREFS, cues: [], titleId: null, cover: null, weMuted: false };
+const state = {
+  segments: [], prefs: DEFAULT_PREFS, cues: [], titleId: null, cover: null, weMuted: false,
+  track: [],          // cues from the caption FILE, on the file's clock
+  offset: null,       // player time − file time, measured from on-screen captions
+  align: null,        // last alignment result, for debugging
+  sentUpTo: 0,        // how many track cues have been sent
+};
 window.__sansDebug = state;
 
 function mainVideo() {
@@ -73,19 +80,57 @@ async function loadMap() {
   } catch { /* offline / no map yet — play unfiltered */ }
 }
 
-// When enough captions are collected and no AI draft exists yet, ask for one.
-async function submitCuesForDraft() {
-  if (!API_READY || !state.titleId) return;
-  // Always submit: the server drops spans it already has, so batches from later in
-  // the film still get drafted even when earlier parts of the map exist.
-  if (state.cues.length < 30) return;
-  const cues = state.cues.splice(0);
+function titleName() {
+  return document.title.replace(/^Watch\s+/i, "").replace(/\s*[|–-]\s*(Prime Video|Disney\+).*$/i, "").trim().slice(0, 200);
+}
+
+// Send cues (already on the PLAYER's clock) and apply the map the server returns.
+async function sendCues(cues) {
+  if (!API_READY || !state.titleId || !cues.length) return false;
   try {
-    await fetch(`${API}/draft-map`, {
+    const r = await fetch(`${API}/draft-map`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ service: adapter.name, title: state.titleId, cues }),
+      body: JSON.stringify({ service: adapter.name, title: state.titleId, name: titleName(), cues }),
     });
-  } catch { state.cues.unshift(...cues); }
+    if (!r.ok) return false;
+    const body = await r.json();
+    if (Array.isArray(body.segments)) state.segments = normalize(body.segments);
+    return true;
+  } catch { return false; }
+}
+
+// ── Caption FILE capture (reads ahead, so profanity is muted before it's spoken) ──
+window.addEventListener("message", (e) => {
+  if (e.source !== window || !e.data?.__sansCaptions) return;
+  const kind = looksLikeCaptions(e.data.text);
+  if (!kind) return;
+  const fresh = kind === "ttml" ? parseTTML(e.data.text) : parseVTT(e.data.text);
+  const seen = new Set(state.track.map(c => c.start.toFixed(2) + c.text));
+  for (const c of fresh) if (!seen.has(c.start.toFixed(2) + c.text)) state.track.push(c);
+  state.track.sort((a, b) => a.start - b.start);
+  syncTrack();
+});
+
+// Once the file's clock is aligned to the player's, send any not-yet-sent cues.
+// Nothing is sent unaligned: a wrong offset would put every mute in the wrong place.
+async function syncTrack() {
+  if (!state.track.length) return;
+  if (state.offset === null) {
+    state.align = estimateOffset(state.cues, state.track);
+    if (state.align.offset === null) return;
+    state.offset = state.align.offset;
+    state.sentUpTo = 0;
+  }
+  const batch = state.track.slice(state.sentUpTo).map(c => ({
+    t: +(c.start + state.offset).toFixed(2), end: +(c.end + state.offset).toFixed(2), text: c.text,
+  }));
+  if (batch.length && await sendCues(batch)) state.sentUpTo = state.track.length;
+}
+
+// Fallback when no caption file was caught: send what was read off the screen.
+async function submitScreenCues() {
+  if (state.track.length || state.cues.length < 30) return;
+  if (await sendCues(state.cues.slice())) state.cues = [];
 }
 
 if (adapter) {
@@ -93,7 +138,8 @@ if (adapter) {
   loadMap();
   watchCaptions();
   setInterval(tick, 100);                 // 100ms: fine enough for mute/skip boundaries
-  setInterval(submitCuesForDraft, 120000);
+  setInterval(syncTrack, 3000);            // alignment improves as on-screen captions arrive
+  setInterval(submitScreenCues, 120000);
   // Both services navigate client-side with pushState, which fires no event. Poll the
   // URL; on a title change, reload the map and DROP collected captions so one title's
   // captions never end up drafting another title's map.
@@ -102,6 +148,9 @@ if (adapter) {
     if (location.href === lastHref) return;
     lastHref = location.href;
     const next = adapter.titleId(location);
-    if (next !== state.titleId) { state.cues = []; loadMap(); }
+    if (next !== state.titleId) {
+      Object.assign(state, { cues: [], track: [], offset: null, align: null, sentUpTo: 0 });
+      loadMap();
+    }
   }, 500);
 }

@@ -1,4 +1,4 @@
-// Netflix. Selectors are UNVERIFIED against the live site — confirm on first run.
+// Netflix. Verified 2026-11-21: title ID, caption selector, and caption-file catch.
 // Each episode has its own /watch/<id>, so maps are naturally per-episode.
 export const netflix = {
   name: "netflix",

@@ -32,6 +32,12 @@
     note(kind, url, ct, text.length, handOff(text, url));
   };
 
+  // Report diagnostics to the top frame's content script every 2s, so everything can be
+  // read from ONE console context (__sansDebug.intercept) instead of two.
+  setInterval(() => {
+    try { window.top.postMessage({ __sansDiag: true, diag: JSON.parse(JSON.stringify(diag)) }, location.origin); } catch {}
+  }, 2000);
+
   const origFetch = window.fetch;
   window.fetch = async function (...args) {
     const res = await origFetch.apply(this, args);

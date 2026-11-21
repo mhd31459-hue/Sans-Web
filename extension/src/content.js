@@ -101,8 +101,11 @@ async function sendCues(cues) {
 
 // ── Caption FILE capture (reads ahead, so profanity is muted before it's spoken) ──
 window.addEventListener("message", (e) => {
+  if (e.origin !== location.origin) return;
+  // Catcher diagnostics, keyed by frame, so __sansDebug.intercept shows every frame's view.
+  if (e.data?.__sansDiag) { (state.intercept ??= {})[e.data.diag.frame] = e.data.diag; return; }
   // Accept from this page or its same-origin frames (Prime's player may be in an iframe).
-  if (e.origin !== location.origin || !e.data?.__sansCaptions) return;
+  if (!e.data?.__sansCaptions) return;
   const kind = looksLikeCaptions(e.data.text);
   if (!kind) return;
   const fresh = kind === "ttml" ? parseTTML(e.data.text) : parseVTT(e.data.text);

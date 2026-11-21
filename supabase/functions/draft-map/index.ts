@@ -76,11 +76,16 @@ Deno.serve(async (req) => {
 
   // 3. Persist facts only. The caption text goes out of scope here and is never stored.
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data: t } = await db.from("titles").upsert({ service, service_id: title }, { onConflict: "service,service_id" }).select("id").single();
-  if (t && segs.length) {
-    await db.from("segments").insert(segs.map(s => ({
+  // Report database failures instead of claiming success — an earlier version returned
+  // {"drafted":2} while every write was being refused for missing table grants.
+  const { data: t, error: te } = await db.from("titles")
+    .upsert({ service, service_id: title }, { onConflict: "service,service_id" }).select("id").single();
+  if (te || !t) return Response.json({ error: "title write failed", detail: te?.message }, { status: 500, headers: CORS });
+  if (segs.length) {
+    const { error: se } = await db.from("segments").insert(segs.map(s => ({
       title_id: t.id, start_s: s.start, end_s: s.end, category: s.category, severity: s.severity, source: s.source, status: "draft",
     })));
+    if (se) return Response.json({ error: "segment write failed", detail: se.message }, { status: 500, headers: CORS });
   }
   return Response.json({ drafted: segs.length }, { headers: CORS });
 });

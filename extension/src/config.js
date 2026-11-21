@@ -1,4 +1,3 @@
-// Your Supabase project's Edge Functions base URL. Find <ref> under
-// Project Settings → General → Reference ID. Until this is replaced the extension
-// makes no network requests at all.
-export const API = "https://YOUR-PROJECT.supabase.co/functions/v1";
+// Supabase Edge Functions base URL for the Sans-web project.
+// The project ref is not a secret; no keys live in the extension.
+export const API = "https://ivwmlkkcimsxcllsilld.supabase.co/functions/v1";

@@ -7,8 +7,9 @@
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+/* Monospaced throughout, like the Mac app (SF Mono on Macs). The app's IT Monelix
+   wordmark font is a personal-use demo, so it isn't served from this public site. */
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 var(--mono); }
 .wrap { max-width: 920px; margin: 0 auto; padding: 24px 16px; }
 ::selection { background: var(--volt); color: #000; }
 

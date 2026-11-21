@@ -29,6 +29,8 @@ captures, copies or downloads video or audio.</p>
   used only while handling that request and is <strong>not stored</strong>. Only the resulting facts are kept:
   start time, end time, and category (for example "profanity, 10.4s–11.3s").</li>
 </ul>
+<p>To stop abuse, the server counts requests per visitor using a one-way hash of the IP address.
+The IP address itself is not stored, and the counts are deleted after about two days.</p>
 <p>Requests contain no name, email, account, cookies or browsing history. The extension has no
 analytics or tracking and does not read anything on sites other than the three services above.</p>
 

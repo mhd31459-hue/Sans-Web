@@ -4,7 +4,7 @@
 // segment: { start, end, category, severity }   (seconds; category in CATEGORIES)
 // prefs:   { [category]: "off" | "mute" | "cover" | "skip" }
 export const CATEGORIES = ["profanity", "nudity", "sex", "violence"];
-export const DEFAULT_PREFS = { profanity: "mute", nudity: "skip", sex: "skip", violence: "cover" };
+export const DEFAULT_PREFS = { profanity: "mute", nudity: "skip", sex: "skip", violence: "skip" };
 
 export function decide(t, segments, prefs = DEFAULT_PREFS) {
   let mute = false, cover = false, skipTo = null;

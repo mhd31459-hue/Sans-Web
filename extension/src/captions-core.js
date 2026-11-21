@@ -1,12 +1,6 @@
 // Pure caption logic (no DOM, so it runs in Node tests):
 //  - parse TTML/DFXP (Prime) and WebVTT (Disney+) caption files the player downloads
-//  - find profanity in cues, so it can be muted BEFORE it's spoken
 //  - align the file's timeline to the player's clock using captions seen on screen
-
-// \w* on both sides of the strong roots catches compounds (bullshit, motherfucker);
-// short words that are substrings of ordinary words keep strict boundaries.
-// KEEP IN SYNC with supabase/functions/draft-map/index.ts.
-export const PROFANITY = /\b(\w*fuck\w*|\w*shit\w*|bitch\w*|cunt\w*|\w*asshole\w*|bastard\w*|dick|dicks|cock|cocks|pussy|goddamn\w*|damn|damned|damnit)\b/i;
 
 const decode = (s) => s
   .replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "")
@@ -65,13 +59,6 @@ export function looksLikeCaptions(text) {
   if (/^﻿?WEBVTT/.test(head)) return "vtt";
   if (/<(?:tt:)?tt[\s>]/.test(head) && /<(?:tt:)?p\b/.test(text)) return "ttml";
   return null;
-}
-
-export function profanitySegments(cues, offset = 0) {
-  return cues.filter(c => PROFANITY.test(c.text)).map(c => ({
-    start: Math.max(0, c.start + offset - 0.3), end: c.end + offset + 0.2,
-    category: "profanity", severity: 2, source: "local",
-  }));
 }
 
 // The caption file's clock and the player's clock can differ (intros, ad stitching,

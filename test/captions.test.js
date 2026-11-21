@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseTTML, parseVTT, looksLikeCaptions, profanitySegments, estimateOffset, PROFANITY } from "../extension/src/captions-core.js";
+import { parseTTML, parseVTT, looksLikeCaptions, estimateOffset } from "../extension/src/captions-core.js";
 
 const TTML = `<?xml version="1.0"?><tt xmlns="http://www.w3.org/ns/ttml" ttp:tickRate="10000000"><body><div>
 <p begin="857200000t" end="880000000t">Your father's passing<br/>has left us in a tangle.</p>
@@ -41,17 +41,6 @@ test("format sniffing", () => {
   assert.equal(looksLikeCaptions(VTT), "vtt");
   assert.equal(looksLikeCaptions('{"json":true}'), null);
   assert.equal(looksLikeCaptions("<html><p>hi</p></html>"), null);
-});
-
-test("profanity segments carry the alignment offset", () => {
-  const s = profanitySegments(parseVTT(VTT), 2);
-  assert.equal(s.length, 1);
-  assert.equal(+s[0].start.toFixed(2), 14.2);
-});
-
-test("matcher: compounds yes, ordinary words no", () => {
-  for (const t of ["bullshit", "dipshit", "motherfucker", "shitand"]) assert.ok(PROFANITY.test(t), t);
-  for (const t of ["Dickens", "cockpit", "shiitake", "Pelargir", "hello"]) assert.ok(!PROFANITY.test(t), t);
 });
 
 test("alignment: recovers a constant offset from on-screen captions", () => {

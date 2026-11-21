@@ -6,15 +6,10 @@
 // violence, and nudity are drafted by Claude from dialogue and SDH sound cues
 // ("[moaning]", "[gunshot]"), then marked 'draft' for people to confirm or correct.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { profanitySegments, type Cue, type Seg } from "../_shared/profanity.ts";
 
-// \w* on BOTH sides of the strong roots: a leading \b alone missed compounds like
-// "bullshit", "horseshit", "dipshit", "motherfucker". Short words (dick, cock, damn)
-// keep strict boundaries so "dickens", "cockpit", "damnation"-style words don't fire.
-const PROFANITY = /\b(\w*fuck\w*|\w*shit\w*|bitch\w*|cunt\w*|\w*asshole\w*|bastard\w*|dick|dicks|cock|cocks|pussy|goddamn\w*|damn|damned|damnit)\b/i;
 const MODEL = "claude-haiku-5-5";   // cheap enough to draft every title anyone watches
 
-type Cue = { t: number; end?: number; text: string };
-type Seg = { start: number; end: number; category: string; severity: number; source: string };
 
 // The extension calls this from www.amazon.com / www.disneyplus.com pages, so the
 // browser sends a CORS preflight first. Without these headers every request is blocked.
@@ -68,16 +63,8 @@ Deno.serve(async (req) => {
   if (!["prime", "disney"].includes(service) || !title || !Array.isArray(cues) || cues.length > 5000)
     return new Response("bad request", { status: 400, headers: CORS });
 
-  // 1. Profanity straight from caption timing (cue-level, so pad a little).
-  const segs: Seg[] = [];
-  cues.forEach((c, i) => {
-    if (PROFANITY.test(c.text)) {
-      // Caption FILES give the cue's real end time; screen-read cues don't, so fall back
-      // to the next cue's start.
-      const end = c.end ?? Math.min(cues[i + 1]?.t ?? c.t + 3, c.t + 4);
-      segs.push({ start: Math.max(0, c.t - 0.3), end: end + 0.2, category: "profanity", severity: 2, source: "captions" });
-    }
-  });
+  // 1. Profanity from captions, timed to the WORD within each line (_shared/profanity.ts).
+  const segs: Seg[] = profanitySegments(cues);
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   // Report database failures instead of claiming success — an earlier version returned
@@ -99,9 +86,19 @@ Deno.serve(async (req) => {
   }
 
   // 3. Persist facts only. The caption text goes out of scope here and is never stored.
-  // Viewers submit captions in 2-minute batches, and many people may watch the same
-  // title, so the same span arrives repeatedly. Drop any new segment that overlaps an
-  // existing one of the same category; otherwise every viewing duplicates the map.
+  // Caption-derived profanity is deterministic, so REGENERATE it for the stretch these
+  // cues cover rather than keeping old copies: that's how improvements (like word-level
+  // timing) reach maps made earlier. Rejected segments are kept, so a false positive
+  // people voted down is never resurrected; human and AI segments are never touched.
+  if (cues.length) {
+    const lo = Math.min(...cues.map(c => c.t)) - 1;
+    const hi = Math.max(...cues.map(c => c.end ?? c.t)) + 5;
+    const { error: de } = await db.from("segments").delete()
+      .eq("title_id", t.id).eq("source", "captions").neq("status", "rejected")
+      .gte("start_s", lo).lte("end_s", hi);
+    if (de) return Response.json({ error: "regenerate failed", detail: de.message }, { status: 500, headers: CORS });
+  }
+  // Anything still overlapping (AI drafts from repeat viewings, rejected segments) wins.
   const { data: existing } = await db.from("segments")
     .select("start_s,end_s,category").eq("title_id", t.id);
   const novel = segs.filter(n => !(existing ?? []).some(e =>

@@ -92,7 +92,10 @@ Deno.serve(async (req) => {
   const fresh = cues.filter(c => c.t > t.ai_drafted_until);
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   let aiRan = false;
-  if (apiKey && fresh.length >= 40) {
+  // Each Claude call costs money, so it's capped per viewer and across everyone per day.
+  // Over the cap, profanity still works; the AI stretch is simply drafted on a later visit.
+  if (apiKey && fresh.length >= 40 &&
+      await hit(db, `ai:${who}`, LIMITS.aiPerViewer) && await hit(db, "ai:global", LIMITS.aiGlobal)) {
     aiRan = await draftScenes(fresh, apiKey, segs);
     if (aiRan) await db.from("titles").update({ ai_drafted_until: fresh[fresh.length - 1].t }).eq("id", t.id);
   }

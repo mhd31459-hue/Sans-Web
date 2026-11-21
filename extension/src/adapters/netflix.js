@@ -7,6 +7,12 @@ export const netflix = {
     const m = loc.pathname.match(/\/watch\/(\d+)/);
     return m ? m[1] : null;
   },
+  // The tab title is just "Netflix"; the player shows the real one (only while its
+  // controls are visible, so later sends fill it in). UNVERIFIED selector.
+  titleName() {
+    const el = document.querySelector("[data-uia='video-title']");
+    return el ? el.innerText.replace(/\s+/g, " ").trim() : "";
+  },
   captionSelector: ".player-timedtext-text-container",
   playerContainer: () => document.querySelector(".watch-video--player-view, .watch-video, [data-uia='video-canvas']"),
   // Netflix's player crashes (error M7375) if video.currentTime is set directly, so

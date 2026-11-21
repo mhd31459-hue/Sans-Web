@@ -4,15 +4,28 @@ import { profanityForCue, profanitySegments, spokenText } from "../supabase/func
 
 test("word-level: mutes the word, not the whole 2s line", () => {
   const [s] = profanityForCue({ t: 10, end: 12, text: "Get the fuck down, now!" });
-  assert.ok(s.start >= 10.3 && s.start <= 10.6, `start ${s.start}`);
+  assert.ok(s.start >= 9.9 && s.start <= 10.3, `start ${s.start}`);
   assert.ok(s.end >= 11.0 && s.end <= 11.4, `end ${s.end}`);
-  assert.ok(s.end - s.start < 1.0, "much shorter than the 2s line");
+  assert.ok(s.end - s.start < 1.5, "shorter than the 2s line");
 });
 
-test("word at the end of the line lands late in the cue", () => {
+// Regression from a real recording: the line was shown ~2s, spoken in 0.7s, and the
+// swear (heard at +0.34–0.58s) got through because the mute started at +0.71s.
+test("fast speech in a lingering caption is still covered", () => {
+  const [s] = profanityForCue({ t: 30.22, end: 32.3, text: "It's kinda fucked up." });
+  assert.ok(s.start <= 30.56 - 0.1 && s.end >= 30.80 + 0.1, `${s.start}–${s.end}`);
+});
+
+test("slow speech across the whole cue is still covered", () => {
+  // Same line spoken slowly enough to fill the cue: the word sits ~1.1–1.7s in.
+  const [s] = profanityForCue({ t: 30.22, end: 32.3, text: "It's kinda fucked up." });
+  assert.ok(s.start <= 30.22 + 1.1 && s.end >= 30.22 + 1.7, `${s.start}–${s.end}`);
+});
+
+test("word at the end of the line: starts early enough for fast speech, ends with the cue", () => {
   const [s] = profanityForCue({ t: 100, end: 103, text: "And you know what? That's bullshit." });
-  assert.ok(s.start > 101.8, `start ${s.start}`);
-  assert.ok(s.end <= 103.2);
+  assert.ok(s.start <= 100 + 26 / 28, `start ${s.start}`);
+  assert.ok(s.end >= 102.9 && s.end <= 103.2, `end ${s.end}`);
 });
 
 test("never shorter than the minimum mute", () => {

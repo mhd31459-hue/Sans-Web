@@ -30,7 +30,8 @@ const LIMITS = {
 type Limit = { windowS: number; max: number };
 
 // Returns true (allowed), false (over the limit) or null (limiter unavailable).
-async function hit(db: ReturnType<typeof createClient>, bucket: string, l: Limit): Promise<boolean | null> {
+// deno-lint-ignore no-explicit-any
+async function hit(db: any, bucket: string, l: Limit): Promise<boolean | null> {
   const { data, error } = await db.rpc("rate_limit_hit", { p_bucket: bucket, p_window_s: l.windowS, p_max: l.max });
   return error ? null : data === true;
 }

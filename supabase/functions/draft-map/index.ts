@@ -59,14 +59,26 @@ async function draftScenes(cues: Cue[], apiKey: string, segs: Seg[]): Promise<bo
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return new Response("POST only", { status: 405, headers: CORS });
-  const { service, title, cues, name } = await req.json() as { service: string; title: string; cues: Cue[]; name?: string };
-  if (!["prime", "disney", "netflix"].includes(service) || !title || !Array.isArray(cues) || cues.length > 5000)
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+  // 0. Rate limit before doing any work. Over the limit → 429; if the limiter itself
+  //    fails, refuse too (503) rather than run unmetered.
+  const who = await clientKey(req);
+  const allowed = await hit(db, `req:${who}`, LIMITS.requests);
+  if (allowed === null) return new Response("rate limiter unavailable", { status: 503, headers: CORS });
+  if (!allowed) return new Response("rate limited", { status: 429, headers: { ...CORS, "Retry-After": "60" } });
+
+  let body: { service?: unknown; title?: unknown; cues?: unknown; name?: unknown };
+  try { body = await req.json(); } catch { return new Response("bad json", { status: 400, headers: CORS }); }
+  const { service, title, name } = body;
+  const cues = validCues(body.cues);
+  if (typeof service !== "string" || !TITLE_ID[service] || typeof title !== "string" ||
+      !TITLE_ID[service].test(title) || !cues)
     return new Response("bad request", { status: 400, headers: CORS });
 
   // 1. Profanity from captions, timed to the WORD within each line (_shared/profanity.ts).
   const segs: Seg[] = profanitySegments(cues);
 
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   // Report database failures instead of claiming success — an earlier version returned
   // {"drafted":2} while every write was being refused for missing table grants.
   const row: Record<string, unknown> = { service, service_id: title };

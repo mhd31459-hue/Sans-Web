@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sans \u2014 community content filters",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Mutes, skips, or covers scenes on Prime Video and Disney+ using community-made timestamp maps. Never copies or captures the video.",
   "permissions": [
     "storage"
@@ -20,7 +20,9 @@
         "intercept.js"
       ],
       "run_at": "document_start",
-      "world": "MAIN"
+      "world": "MAIN",
+      "all_frames": true,
+      "match_about_blank": true
     },
     {
       "matches": [

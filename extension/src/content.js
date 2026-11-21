@@ -101,7 +101,8 @@ async function sendCues(cues) {
 
 // ── Caption FILE capture (reads ahead, so profanity is muted before it's spoken) ──
 window.addEventListener("message", (e) => {
-  if (e.source !== window || !e.data?.__sansCaptions) return;
+  // Accept from this page or its same-origin frames (Prime's player may be in an iframe).
+  if (e.origin !== location.origin || !e.data?.__sansCaptions) return;
   const kind = looksLikeCaptions(e.data.text);
   if (!kind) return;
   const fresh = kind === "ttml" ? parseTTML(e.data.text) : parseVTT(e.data.text);

@@ -91,8 +91,13 @@ async function loadMap() {
   } catch { /* offline / no map yet — play unfiltered */ }
 }
 
+// Netflix's tab title is just "Netflix", so adapters can read the name from the player.
+// A bare service name is sent as "" so the server keeps any real name it already has.
 function titleName() {
-  return document.title.replace(/^Watch\s+/i, "").replace(/\s*[|–-]\s*(Prime Video|Disney\+).*$/i, "").trim().slice(0, 200);
+  const fromPlayer = adapter.titleName?.();
+  const name = (fromPlayer || document.title).replace(/^Watch\s+/i, "")
+    .replace(/\s*[|–-]\s*(Prime Video|Disney\+|Netflix).*$/i, "").trim().slice(0, 200);
+  return /^(netflix|prime video|disney\+|amazon\.com)?$/i.test(name) ? "" : name;
 }
 
 // Send cues (already on the PLAYER's clock) and apply the map the server returns.

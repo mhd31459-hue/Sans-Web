@@ -64,7 +64,8 @@ function validCues(v: unknown): Cue[] | null {
   return v as Cue[];
 }
 
-async function draftScenes(cues: Cue[], apiKey: string, segs: Seg[]): Promise<boolean> {
+// Returns "ok: N scene(s)" or a short reason (HTTP status / parse failure) — never the key or the reply.
+async function draftScenes(cues: Cue[], apiKey: string, segs: Seg[]): Promise<string> {
   const transcript = cues.map(c => `${c.t.toFixed(1)}\t${c.text}`).join("\n");
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -86,19 +87,26 @@ async function draftScenes(cues: Cue[], apiKey: string, segs: Seg[]): Promise<bo
       messages: [{ role: "user", content: transcript }],
     }),
   });
-  if (!r.ok) return false;
+  if (!r.ok) { console.error("anthropic", r.status, (await r.text()).slice(0, 300)); return `anthropic ${r.status}` + (r.status === 401 && !apiKey.startsWith("sk-ant-api")
+    ? " (key should start with sk-ant-api; this looks like a different kind of token)" : ""); }
   {
     const body = await r.json();
-    const text = body.content?.[0]?.text ?? "[]";
+    // Read every text block: the first block isn't always text (e.g. a thinking block).
+    const text = (body.content ?? []).filter((b: { type: string }) => b.type === "text")
+      .map((b: { text: string }) => b.text).join("\n");
+    const a = text.indexOf("["), z = text.lastIndexOf("]");
+    if (a < 0 || z < a) { console.error("ai reply without JSON", body.stop_reason, text.slice(0, 300)); return `unreadable reply (${body.stop_reason})`; }
+    let n = 0;
     try {
-      const drafted = JSON.parse(text.slice(text.indexOf("["), text.lastIndexOf("]") + 1));
-      for (const d of drafted) {
-        if (["sex", "nudity", "violence"].includes(d.category) && d.end > d.start)
+      for (const d of JSON.parse(text.slice(a, z + 1))) {
+        if (["sex", "nudity", "violence"].includes(d.category) && d.end > d.start) {
           segs.push({ start: +d.start, end: +d.end, category: d.category, severity: Math.min(3, Math.max(1, d.severity | 0 || 2)), source: "ai" });
+          n++;
+        }
       }
-    } catch { /* model returned non-JSON; keep the caption-derived profanity */ }
+    } catch { console.error("ai reply bad JSON", text.slice(0, 300)); return "unreadable reply (bad JSON)"; }
+    return `ok: ${n} scene(s)`;
   }
-  return true;
 }
 
 Deno.serve(async (req) => {
@@ -135,15 +143,20 @@ Deno.serve(async (req) => {
   // 2. Scene-level categories drafted by Claude — only for stretches not yet drafted,
   //    and only once there's enough new dialogue to judge scenes from.
   const fresh = cues.filter(c => c.t > t.ai_drafted_until);
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  let aiRan = false;
+  // Tolerate the usual paste slips: whitespace, quotes, or the whole "NAME=value" line.
+  const apiKey = (Deno.env.get("ANTHROPIC_API_KEY") ?? "").trim()
+    .replace(/^ANTHROPIC_API_KEY\s*=\s*/, "").replace(/^["']|["']$/g, "");
   // Each Claude call costs money, so it's capped per viewer and across everyone per day.
   // Over the cap, profanity still works; the AI stretch is simply drafted on a later visit.
-  if (apiKey && fresh.length >= 40 &&
-      await hit(db, `ai:${who}`, LIMITS.aiPerViewer) && await hit(db, "ai:global", LIMITS.aiGlobal)) {
-    aiRan = await draftScenes(fresh, apiKey, segs);
-    if (aiRan) await db.from("titles").update({ ai_drafted_until: fresh[fresh.length - 1].t }).eq("id", t.id);
+  // `ai` says what happened, so a silent failure (bad key, no credit) is visible.
+  let ai = !apiKey ? "no key" : fresh.length < 40 ? "not enough new lines" : "";
+  if (!ai) {
+    if (!await hit(db, `ai:${who}`, LIMITS.aiPerViewer)) ai = "viewer daily limit";
+    else if (!await hit(db, "ai:global", LIMITS.aiGlobal)) ai = "global daily limit";
+    else ai = await draftScenes(fresh, apiKey!, segs);
   }
+  const aiRan = ai.startsWith("ok");
+  if (aiRan) await db.from("titles").update({ ai_drafted_until: fresh[fresh.length - 1].t }).eq("id", t.id);
 
   // 3. Persist facts only. The caption text goes out of scope here and is never stored.
   // Caption-derived profanity is deterministic, so REGENERATE it for the stretch these
@@ -175,5 +188,5 @@ Deno.serve(async (req) => {
   const { data: all } = await db.from("segments")
     .select("start_s,end_s,category,severity,source").eq("title_id", t.id).neq("status", "rejected").order("start_s");
   const segments = (all ?? []).map(x => ({ start: x.start_s, end: x.end_s, category: x.category, severity: x.severity, source: x.source }));
-  return Response.json({ drafted: segs.length, aiRan, segments }, { headers: CORS });
+  return Response.json({ drafted: segs.length, aiRan, ai, segments }, { headers: CORS });
 });

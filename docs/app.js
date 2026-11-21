@@ -68,14 +68,15 @@ async function renderHome() {
   for (const s of segs ?? []) {
     const c = counts.get(s.title_id) ?? {}; c[s.category] = (c[s.category] ?? 0) + 1; counts.set(s.title_id, c);
   }
-  view.innerHTML = `<h1>Filter maps</h1>
-    <p class="muted">Maps are made automatically when someone watches with the Sans extension and captions on.
+  view.innerHTML = `<div class="hero"><p class="word">SANS</p><p>filter maps for the shows you already watch.</p></div>
+    <h2>Maps</h2>
+    <p class="muted small">Made automatically when someone watches with the Sans extension and captions on.
     Sign in to confirm, correct, or add scenes.</p>
     ${titles?.length ? `<ul class="titles">${titles.map(t => {
       const c = counts.get(t.id) ?? {};
       const chips = CATS.filter(k => c[k]).map(k => `<span class="chip ${k}">${c[k]} ${k}</span>`).join("");
       return `<li><a class="card" href="#/t/${t.id}">
-        <span><strong>${esc(t.name || t.service_id)}</strong><br><span class="muted small">${esc(SERVICE[t.service] ?? t.service)}</span></span>
+        <span><strong>${esc(t.name || t.service_id)}</strong><br><span class="svc">${esc(SERVICE[t.service] ?? t.service)}</span></span>
         <span class="chips">${chips || '<span class="muted small">no segments yet</span>'}</span></a></li>`;
     }).join("")}</ul>` : notice("No maps yet. Watch something on Prime Video with the extension and captions on.")}`;
 }
@@ -120,7 +121,7 @@ function row(s) {
     <td>${fmt(s.start_s)}</td><td>${fmt(s.end_s)}</td>
     <td><span class="chip ${esc(s.category)}">${esc(s.category)}</span></td>
     <td><span class="badge">${esc(s.source)}</span></td>
-    <td><span class="badge">${esc(s.status)}</span></td>
+    <td><span class="badge ${s.status === "confirmed" ? "confirmed" : ""}">${esc(s.status)}</span></td>
     <td>${s.score ?? 0}</td>
     ${user ? `<td class="actions">
       <button data-vote="1" data-id="${s.id}" aria-label="Confirm" ${mine === 1 ? "disabled" : ""}>👍</button>

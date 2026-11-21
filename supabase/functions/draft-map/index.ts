@@ -16,11 +16,20 @@ const MODEL = "claude-haiku-5-5";   // cheap enough to draft every title anyone 
 type Cue = { t: number; text: string };
 type Seg = { start: number; end: number; category: string; severity: number; source: string };
 
+// The extension calls this from www.amazon.com / www.disneyplus.com pages, so the
+// browser sends a CORS preflight first. Without these headers every request is blocked.
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "content-type",
+};
+
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return new Response("POST only", { status: 405 });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (req.method !== "POST") return new Response("POST only", { status: 405, headers: CORS });
   const { service, title, cues } = await req.json() as { service: string; title: string; cues: Cue[] };
   if (!["prime", "disney"].includes(service) || !title || !Array.isArray(cues) || cues.length > 5000)
-    return new Response("bad request", { status: 400 });
+    return new Response("bad request", { status: 400, headers: CORS });
 
   // 1. Profanity straight from caption timing (cue-level, so pad a little).
   const segs: Seg[] = [];
@@ -73,5 +82,5 @@ Deno.serve(async (req) => {
       title_id: t.id, start_s: s.start, end_s: s.end, category: s.category, severity: s.severity, source: s.source, status: "draft",
     })));
   }
-  return Response.json({ drafted: segs.length });
+  return Response.json({ drafted: segs.length }, { headers: CORS });
 });

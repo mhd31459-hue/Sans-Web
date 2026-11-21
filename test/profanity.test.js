@@ -16,6 +16,12 @@ test("fast speech in a lingering caption is still covered", () => {
   assert.ok(s.start <= 30.56 - 0.1 && s.end >= 30.80 + 0.1, `${s.start}–${s.end}`);
 });
 
+// Second real recording: swear at the END of a line, heard +0.58–0.94s, old mute began +1.05s.
+test("fast swear at the end of a line is covered", () => {
+  const [s] = profanityForCue({ t: 4.48, end: 6.5, text: "The dining site is bullshit." });
+  assert.ok(s.start <= 5.06 - 0.1 && s.end >= 5.42 + 0.1, `${s.start}–${s.end}`);
+});
+
 test("slow speech across the whole cue is still covered", () => {
   // Same line spoken slowly enough to fill the cue: the word sits ~1.1–1.7s in.
   const [s] = profanityForCue({ t: 30.22, end: 32.3, text: "It's kinda fucked up." });

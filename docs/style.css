@@ -26,7 +26,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 var
 
 a { color: var(--volt); }
 .muted { color: var(--muted); } .small { font-size: 13px; }
-h1 { font-size: 22px; margin: 4px 0 2px; }
+h1 { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
 h2 { font: 600 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--label); margin: 32px 0 12px; }
 
 input, select, button { font: 13px var(--mono); color: var(--text); }

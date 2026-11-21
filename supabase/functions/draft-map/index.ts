@@ -81,6 +81,14 @@ Deno.serve(async (req) => {
   const { data: t, error: te } = await db.from("titles")
     .upsert({ service, service_id: title }, { onConflict: "service,service_id" }).select("id").single();
   if (te || !t) return Response.json({ error: "title write failed", detail: te?.message }, { status: 500, headers: CORS });
+  // Viewers submit captions in 2-minute batches, and many people may watch the same
+  // title, so the same span arrives repeatedly. Drop any new segment that overlaps an
+  // existing one of the same category; otherwise every viewing duplicates the map.
+  const { data: existing } = await db.from("segments")
+    .select("start_s,end_s,category").eq("title_id", t.id);
+  const fresh = segs.filter(n => !(existing ?? []).some(e =>
+    e.category === n.category && n.start < e.end_s && n.end > e.start_s));
+  segs.length = 0; segs.push(...fresh);
   if (segs.length) {
     const { error: se } = await db.from("segments").insert(segs.map(s => ({
       title_id: t.id, start_s: s.start, end_s: s.end, category: s.category, severity: s.severity, source: s.source, status: "draft",

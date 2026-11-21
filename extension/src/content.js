@@ -76,7 +76,9 @@ async function loadMap() {
 // When enough captions are collected and no AI draft exists yet, ask for one.
 async function submitCuesForDraft() {
   if (!API_READY || !state.titleId) return;
-  if (state.cues.length < 30 || state.segments.some(s => s.source === "ai")) return;
+  // Always submit: the server drops spans it already has, so batches from later in
+  // the film still get drafted even when earlier parts of the map exist.
+  if (state.cues.length < 30) return;
   const cues = state.cues.splice(0);
   try {
     await fetch(`${API}/draft-map`, {

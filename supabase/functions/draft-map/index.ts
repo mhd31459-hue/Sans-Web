@@ -8,7 +8,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { profanitySegments, type Cue, type Seg } from "../_shared/profanity.ts";
 
-const MODEL = "claude-haiku-5-5";   // cheap enough to draft every title anyone watches
+// Haiku is cheap enough to draft every title anyone watches; AI_MODEL can switch to a
+// larger model, which knows more films and their well-known scenes.
+const MODEL = Deno.env.get("AI_MODEL") ?? "claude-haiku-5-5";
+const GAP_S = 20;   // a stretch this long with no captions is called out to the model
 
 
 // The extension calls this from www.amazon.com / www.disneyplus.com pages, so the
@@ -65,8 +68,18 @@ function validCues(v: unknown): Cue[] | null {
 }
 
 // Returns "ok: N scene(s)" or a short reason (HTTP status / parse failure) — never the key or the reply.
-async function draftScenes(cues: Cue[], apiKey: string, segs: Seg[]): Promise<string> {
-  const transcript = cues.map(c => `${c.t.toFixed(1)}\t${c.text}`).join("\n");
+async function draftScenes(cues: Cue[], apiKey: string, segs: Seg[], name: string): Promise<string> {
+  // Captions are silent about violence played under music or a voiceover, so the model also
+  // gets (a) the title, to use what it knows about the film, and (b) explicit marks where
+  // nothing is captioned for a while: in a film those stretches are often action or montage.
+  const lines: string[] = [];
+  cues.forEach((c, i) => {
+    const prevEnd = i ? (cues[i - 1].end ?? cues[i - 1].t) : null;
+    if (prevEnd !== null && c.t - prevEnd >= GAP_S)
+      lines.push(`${prevEnd.toFixed(1)}\t[NO CAPTIONS FOR ${Math.round(c.t - prevEnd)}s]`);
+    lines.push(`${c.t.toFixed(1)}\t${c.text}`);
+  });
+  const transcript = (name ? `Title: ${name}\n\n` : "") + lines.join("\n");
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -78,11 +91,17 @@ async function draftScenes(cues: Cue[], apiKey: string, segs: Seg[]): Promise<st
       model: MODEL,
       max_tokens: 4000,
       system:
-        "You draft content-filter timestamps for a family viewing tool. Input is a film's caption " +
-        "lines with their start time in seconds, including hard-of-hearing sound cues in brackets. " +
-        "Identify scenes likely to contain sexual content, nudity, or graphic violence. Use sound cues, " +
-        "dialogue, and context. Scenes usually span several caption lines; extend each segment to cover " +
-        "the whole scene. Be conservative: only flag what the captions give real evidence for. " +
+        "You draft content-filter timestamps for a family viewing tool. Input is a film's or episode's " +
+        "caption lines with their start time in seconds, including hard-of-hearing sound cues in brackets, " +
+        "and [NO CAPTIONS FOR Ns] marks where nothing is captioned. Identify scenes likely to contain " +
+        "sexual content, nudity, or graphic violence. Captions often say nothing during violence or sex " +
+        "played under music, a voiceover, or silence, so infer from everything available: the dialogue " +
+        "before and after (threats, a chase, someone wounded or dead, a body, 'are you hurt?'), music " +
+        "and sound cues, long uncaptioned stretches, and what you know about this specific title if you " +
+        "recognise it. Anchor every timestamp to that caption context; don't invent times from memory " +
+        "alone. Scenes usually span several caption lines; extend each segment to cover the whole scene. " +
+        "Missing a scene is worse than flagging a calm one: flag likely scenes with severity 2-3 and " +
+        "plausible-but-uncertain ones with severity 1. " +
         'Reply with ONLY a JSON array: [{"start":s,"end":s,"category":"sex|nudity|violence","severity":1-3}].',
       messages: [{ role: "user", content: transcript }],
     }),
@@ -137,7 +156,7 @@ Deno.serve(async (req) => {
   const row: Record<string, unknown> = { service, service_id: title };
   if (typeof name === "string" && name.trim()) row.name = name.trim().slice(0, 200);
   const { data: t, error: te } = await db.from("titles")
-    .upsert(row, { onConflict: "service,service_id" }).select("id, ai_drafted_until").single();
+    .upsert(row, { onConflict: "service,service_id" }).select("id, ai_drafted_until, name").single();
   if (te || !t) return Response.json({ error: "title write failed", detail: te?.message }, { status: 500, headers: CORS });
 
   // 2. Scene-level categories drafted by Claude — only for stretches not yet drafted,
@@ -153,7 +172,7 @@ Deno.serve(async (req) => {
   if (!ai) {
     if (!await hit(db, `ai:${who}`, LIMITS.aiPerViewer)) ai = "viewer daily limit";
     else if (!await hit(db, "ai:global", LIMITS.aiGlobal)) ai = "global daily limit";
-    else ai = await draftScenes(fresh, apiKey!, segs);
+    else ai = await draftScenes(fresh, apiKey!, segs, t.name ?? "");
   }
   const aiRan = ai.startsWith("ok");
   if (aiRan) await db.from("titles").update({ ai_drafted_until: fresh[fresh.length - 1].t }).eq("id", t.id);

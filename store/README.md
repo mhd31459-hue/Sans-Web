@@ -43,6 +43,7 @@ HOW IT WORKS
 • Press play. Sans looks up a "map" for that title: a list of timestamps, each with a category (profanity, nudity, sex, violence).
 • No map yet? Turn subtitles on and Sans makes one. It reads the subtitles ahead of time and marks each swear word, so the word is muted before it's spoken.
 • Sans uses the service's own player controls to mute, skip or cover each marked moment.
+• Something slipped through? Press Option/Alt+M, then pick what it was. It's filtered right away for you and everyone after you.
 
 WHAT IT NEVER DOES
 • It never records, captures, copies or downloads video or audio.

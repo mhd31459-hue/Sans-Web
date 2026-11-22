@@ -16,6 +16,18 @@
       "32": "icons/icon32.png"
     }
   },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "report-missed": {
+      "suggested_key": {
+        "default": "Alt+M",
+        "mac": "Alt+M"
+      },
+      "description": "Report something Sans missed (then press 1–4)"
+    }
+  },
   "permissions": [
     "storage"
   ],

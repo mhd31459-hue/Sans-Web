@@ -7,6 +7,7 @@ import { prime } from "./adapters/prime.js";
 import { disney } from "./adapters/disney.js";
 import { netflix } from "./adapters/netflix.js";
 import { API } from "./config.js";
+import { installReportHotkey, reportSegment, toast, fmt } from "./report.js";
 
 // The config ships with a placeholder. Until it's replaced, make NO network requests —
 // otherwise caption text gets posted to an address nobody controls.

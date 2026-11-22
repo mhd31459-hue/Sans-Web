@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   const { service, title, name, t, category } = b;
   if (typeof service !== "string" || !TITLE_ID[service] || typeof title !== "string" || !TITLE_ID[service].test(title) ||
       typeof t !== "number" || !Number.isFinite(t) || t < 0 || t > 86400 ||
-      typeof category !== "string" || !CATEGORIES.includes(category))
+      typeof category !== "string" || !WINDOW[category])
     return new Response("bad request", { status: 400, headers: CORS });
 
   const row: Record<string, unknown> = { service, service_id: title };

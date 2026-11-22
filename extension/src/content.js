@@ -161,7 +161,7 @@ async function syncTrack() {
 // rewind into it is filtered, then sent so the next viewer gets it too.
 async function report(category) {
   const v = mainVideo();
-  if (!v || !state.titleId) { toast("Sans: no title found on this page.", adapter.playerContainer); return; }
+  if (!v || !state.titleId) { toast("Sans: no title found on this page."); return; }
   const t = v.currentTime;
   state.segments = normalize([...state.segments, reportSegment(t, category)]);
   if (!API_READY) return;
@@ -173,9 +173,9 @@ async function report(category) {
     if (!r.ok) throw new Error(String(r.status));
     const body = await r.json();
     if (Array.isArray(body.segments)) state.segments = normalize(body.segments);
-    toast(`Sans: reported ${category} at ${fmt(t)}. Thanks, it's filtered for everyone now.`, adapter.playerContainer);
+    toast(`Sans: reported ${category} at ${fmt(t)}. Thanks, it's filtered for everyone now.`);
   } catch (err) {
-    toast(`Sans: filtered here, but the report didn't send (${err.message}).`, adapter.playerContainer);
+    toast(`Sans: filtered here, but the report didn't send (${err.message}).`);
   }
 }
 
@@ -189,7 +189,9 @@ if (adapter) {
   chrome.storage?.sync.get("prefs", ({ prefs }) => { if (prefs) state.prefs = { ...DEFAULT_PREFS, ...prefs }; });
   loadMap();
   watchCaptions();
-  installReportHotkey({ playerContainer: adapter.playerContainer, onPick: report });
+  const hotkey = installReportHotkey({ onPick: report });
+  // The browser-level shortcut (manifest "commands" → background.js) arrives as a message.
+  chrome.runtime.onMessage?.addListener((msg) => { if (msg?.sansReport) hotkey.toggle(); });
   setInterval(tick, 100);                 // 100ms: fine enough for mute/skip boundaries
   setInterval(syncTrack, 3000);            // alignment improves as on-screen captions arrive
   setInterval(submitScreenCues, 120000);

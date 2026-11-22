@@ -24,15 +24,27 @@ const fmt = (s) => {
   return h ? `${h}:${p(m)}:${p(s % 60)}` : `${m}:${p(s % 60)}`;
 };
 
-// Fullscreen players only show descendants of the fullscreen element.
-const host = (fallback) => document.fullscreenElement || fallback() || document.body;
-const BOX = "position:fixed;left:50%;bottom:12%;transform:translateX(-50%);z-index:2147483647;" +
+// Shown in the browser's TOP LAYER (popover) where supported: above the player, its
+// controls and full screen, whatever their stacking. Attaching inside the player's own
+// container (v0.4.0) left the box clipped or buried there.
+function mount(el) {
+  const fs = document.fullscreenElement;
+  if (el.showPopover) {
+    el.popover = "manual";
+    document.body.append(el);
+    try { el.showPopover(); return; } catch { el.remove(); el.removeAttribute("popover"); }
+  }
+  (fs && fs.tagName !== "VIDEO" ? fs : document.body).append(el);
+}
+const BOX = "position:fixed;left:50%;bottom:12%;top:auto;right:auto;margin:0;transform:translateX(-50%);z-index:2147483647;" +
   "background:#121212;color:#e1e1e1;border:1px solid #e0ff00;border-radius:12px;padding:14px 18px;" +
   "font:14px/1.5 ui-monospace,'SF Mono',Menlo,monospace;box-shadow:0 8px 30px #000a;max-width:90vw";
 
-// onPick(category) is called with the chosen category; returns a controller for the key handler.
-export function installReportHotkey({ playerContainer, onPick }) {
-  let picker = null, timer = 0;
+// onPick(category) is called with the chosen category. Returns toggle(), which the
+// browser-level shortcut (background.js → message) also calls, because a player can
+// swallow keys before a page listener sees them.
+export function installReportHotkey({ onPick }) {
+  let picker = null, timer = 0, lastToggle = 0;
 
   const close = () => { picker?.remove(); picker = null; clearTimeout(timer); };
   const open = () => {
@@ -58,15 +70,22 @@ export function installReportHotkey({ playerContainer, onPick }) {
     hint.textContent = "Esc to cancel";
     hint.style.cssText = "color:#6b6b6b;font-size:12px;margin-top:8px";
     picker.append(hint);
-    host(playerContainer).append(picker);
+    mount(picker);
     timer = setTimeout(close, 10000);
   };
 
-  // Capture phase on window: runs before the player's own shortcuts (Netflix uses many keys).
+  // Both the page key listener and the browser shortcut may fire for one press.
+  const toggle = () => {
+    if (Date.now() - lastToggle < 400) return;
+    lastToggle = Date.now();
+    picker ? close() : open();
+  };
+
+  // Capture phase on window: runs before most of the player's own shortcuts.
   window.addEventListener("keydown", (e) => {
     if (isReportHotkey(e)) {
       e.preventDefault(); e.stopImmediatePropagation();
-      picker ? close() : open();
+      toggle();
       return;
     }
     if (!picker) return;
@@ -74,13 +93,14 @@ export function installReportHotkey({ playerContainer, onPick }) {
     if (choice || e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); }
     if (choice) { close(); onPick(choice[1]); } else if (e.key === "Escape") close();
   }, true);
+  return { toggle };
 }
 
-export function toast(text, playerContainer, ms = 3500) {
+export function toast(text, ms = 3500) {
   const el = document.createElement("div");
   el.style.cssText = BOX;
   el.textContent = text;
-  host(playerContainer).append(el);
+  mount(el);
   setTimeout(() => el.remove(), ms);
 }
 

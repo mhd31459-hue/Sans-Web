@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     .upsert(row, { onConflict: "service,service_id" }).select("id").single();
   if (te || !ttl) return Response.json({ error: "title write failed" }, { status: 500, headers: CORS });
 
-  let start = Math.max(0, t - BEFORE_S), end = t + AFTER_S;
+  let start = Math.max(0, t - WINDOW[category][0]), end = t + WINDOW[category][1];
   // Merge with an overlapping report of the same category instead of stacking duplicates.
   const { data: near } = await db.from("segments").select("id, start_s, end_s")
     .eq("title_id", ttl.id).eq("source", "report").eq("category", category).neq("status", "rejected")

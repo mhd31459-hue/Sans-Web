@@ -189,6 +189,7 @@ if (adapter) {
   chrome.storage?.sync.get("prefs", ({ prefs }) => { if (prefs) state.prefs = { ...DEFAULT_PREFS, ...prefs }; });
   loadMap();
   watchCaptions();
+  installReportHotkey({ playerContainer: adapter.playerContainer, onPick: report });
   setInterval(tick, 100);                 // 100ms: fine enough for mute/skip boundaries
   setInterval(syncTrack, 3000);            // alignment improves as on-screen captions arrive
   setInterval(submitScreenCues, 120000);

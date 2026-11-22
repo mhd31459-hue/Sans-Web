@@ -156,6 +156,29 @@ async function syncTrack() {
   if (batch.length && await sendCues(batch)) state.sentUpTo = state.track.length;
 }
 
+// ── "Missed one" report (Alt/Option+M, then 1–4) ───────────────────────────
+// Applied locally first, so a scene that's still playing is skipped right now and a
+// rewind into it is filtered, then sent so the next viewer gets it too.
+async function report(category) {
+  const v = mainVideo();
+  if (!v || !state.titleId) { toast("Sans: no title found on this page.", adapter.playerContainer); return; }
+  const t = v.currentTime;
+  state.segments = normalize([...state.segments, reportSegment(t, category)]);
+  if (!API_READY) return;
+  try {
+    const r = await fetch(`${API}/report`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ service: adapter.name, title: state.titleId, name: titleName(), t: +t.toFixed(2), category }),
+    });
+    if (!r.ok) throw new Error(String(r.status));
+    const body = await r.json();
+    if (Array.isArray(body.segments)) state.segments = normalize(body.segments);
+    toast(`Sans: reported ${category} at ${fmt(t)}. Thanks, it's filtered for everyone now.`, adapter.playerContainer);
+  } catch (err) {
+    toast(`Sans: filtered here, but the report didn't send (${err.message}).`, adapter.playerContainer);
+  }
+}
+
 // Fallback when no caption file was caught: send what was read off the screen.
 async function submitScreenCues() {
   if (state.track.length || state.cues.length < 30) return;

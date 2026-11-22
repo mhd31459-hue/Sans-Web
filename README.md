@@ -13,11 +13,13 @@ The database stores **facts** (start, end, category), never caption text or fram
 
 | Category  | Source | Notes |
 |-----------|--------|-------|
-| profanity | caption lines, matched deterministically | cue-level timing, padded |
-| sex, violence | Claude drafts from captions + SDH sound cues (`[moaning]`, `[gunshot]`) | marked `draft` until people confirm |
+| profanity | caption lines, matched deterministically | word-level timing, padded for fast speech |
+| sex, violence | Claude drafts from captions, SDH sound cues, uncaptioned gaps and the title | marked `draft` until people confirm |
 | nudity    | Claude drafts, weakly; mostly community correction | captions rarely describe nudity |
+| any       | **"Missed one" hotkey**: viewer presses **Alt/Option+M**, then 1 violence · 2 sex · 3 nudity · 4 language | filtered at once locally and for everyone; `report` drafts merge and are tightened on the website |
 
 Caption text is sent once to `draft-map`, used to draft timestamps, and discarded.
+Reports store only the playhead time and category.
 
 ## Layout
 

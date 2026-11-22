@@ -7,7 +7,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { CORS, hit, clientKey, TITLE_ID } from "../_shared/guard.ts";
 
-const CATEGORIES = ["profanity", "nudity", "sex", "violence"];
 // A viewer reacts after the fact: cover what they just saw, and (for scenes) a little
 // ahead in case it's still going. A missed swear is over by the time they press the key.
 // The extension uses the same windows (src/report.js) so its instant local fix matches.

@@ -8,8 +8,12 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { CORS, hit, clientKey, TITLE_ID } from "../_shared/guard.ts";
 
 const CATEGORIES = ["profanity", "nudity", "sex", "violence"];
-const BEFORE_S = 20;    // a viewer reacts after the fact: cover what they just saw…
-const AFTER_S = 10;     // …and a little ahead, in case the scene is still going
+// A viewer reacts after the fact: cover what they just saw, and (for scenes) a little
+// ahead in case it's still going. A missed swear is over by the time they press the key.
+// The extension uses the same windows (src/report.js) so its instant local fix matches.
+const WINDOW: Record<string, [number, number]> = {
+  profanity: [8, 1], nudity: [20, 10], sex: [20, 10], violence: [20, 10],
+};
 const MAX_LEN_S = 300;  // merged reports never grow past five minutes
 const LIMIT = { windowS: 600, max: 20 };   // per viewer, 10 minutes
 

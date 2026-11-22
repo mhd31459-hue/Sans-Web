@@ -70,7 +70,7 @@ export function installReportHotkey({ playerContainer, onPick }) {
       return;
     }
     if (!picker) return;
-    const choice = CHOICES.find(([code]) => code === e.code || code === "Numpad" + e.code.slice(-1));
+    const choice = CHOICES.find(([code]) => e.code === code || e.code === code.replace("Digit", "Numpad"));
     if (choice || e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); }
     if (choice) { close(); onPick(choice[1]); } else if (e.key === "Escape") close();
   }, true);

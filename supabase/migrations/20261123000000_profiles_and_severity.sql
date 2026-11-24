@@ -120,5 +120,4 @@ end $$;
 create trigger severity_votes_apply after insert or update or delete on severity_votes
   for each row execute function apply_severity_vote();
 
--- The extension's "missed one" picker now asks how strong it was.
 grant usage, select on all sequences in schema public to authenticated, service_role;

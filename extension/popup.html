@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sans</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header>
+  <span class="brand">SANS</span>
+  <span class="muted small" id="sync"></span>
+</header>
+
+<section>
+  <label class="cap" for="who">Who's watching</label>
+  <div class="row">
+    <select id="who"></select>
+    <button id="add" title="Add a profile">+</button>
+  </div>
+</section>
+
+<section id="editor">
+  <div class="row">
+    <input id="name" maxlength="40" aria-label="Profile name">
+    <button id="del" class="ghost" title="Delete this profile">Delete</button>
+  </div>
+  <div class="presets" id="presets"></div>
+  <div id="cats"></div>
+  <label class="check"><input type="checkbox" id="confirmed">
+    <span>Confirmed scenes only<br><span class="muted small">Ignore AI and reported drafts nobody has reviewed. Swear words from subtitles still count.</span></span></label>
+</section>
+
+<section class="account" id="account"></section>
+<script type="module" src="popup.js"></script>
+</body>
+</html>

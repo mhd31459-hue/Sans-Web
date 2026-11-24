@@ -4,7 +4,7 @@
 export const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "content-type",
+  "Access-Control-Allow-Headers": "content-type, authorization, apikey, x-client-info, x-sans-device",
 };
 
 export type Limit = { windowS: number; max: number };

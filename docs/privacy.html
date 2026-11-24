@@ -13,7 +13,7 @@
 </header>
 <main class="wrap prose">
 <h1>Privacy policy</h1>
-<p class="muted small">Sans browser extension and Sans Maps website · updated November 21, 2026</p>
+<p class="muted small">Sans browser extension and Sans Maps website · updated November 23, 2026</p>
 
 <h2>What the extension does</h2>
 <p>Sans mutes, skips, or covers parts of shows on Prime Video, Disney+ and Netflix using
@@ -31,8 +31,15 @@ captures, copies or downloads video or audio.</p>
 </ul>
 <p>To stop abuse, the server counts requests per visitor using a one-way hash of the IP address.
 The IP address itself is not stored, and the counts are deleted after about two days.</p>
-<p>Requests contain no name, email, account, cookies or browsing history. The extension has no
-analytics or tracking and does not read anything on sites other than the three services above.</p>
+<ul>
+  <li><strong>"Missed one" reports:</strong> when you press Option/Alt+M and pick a category and strength,
+  the extension sends the title, the playhead time, the category and the strength. Reports are anonymous.</li>
+  <li><strong>If you link the extension to an account:</strong> it sends a device token with requests for your
+  profiles and with your ratings of scenes ("that was strong", "shouldn't be filtered"), so they're tied to your account.</li>
+</ul>
+<p>Without a linked account, requests contain no name, email, account, cookies or browsing history. The
+extension has no analytics or tracking. Besides the three services above, it runs only on this website,
+to let the website link it to your account.</p>
 
 <h2>Who processes it</h2>
 <ul>
@@ -44,12 +51,21 @@ analytics or tracking and does not read anything on sites other than the three s
 <p>Sans does not sell data or use it for advertising.</p>
 
 <h2>Stored on your computer</h2>
-<p>Your filter choices (mute, skip or cover for each category) are kept in Chrome's extension storage.</p>
+<p>Your profiles (names such as "Kids", and what each one filters) and which one is active are kept in
+Chrome's extension storage. If you link an account, the extension also keeps its device token and your
+email address there, to show which account it's linked to.</p>
 
-<h2>Website accounts</h2>
-<p>Browsing maps needs no account. If you sign in to vote on or correct maps, your email address is
-stored by Supabase to sign you in, and your votes and edits are linked to your account. Email addresses
-aren't shown publicly.</p>
+<h2>Accounts</h2>
+<p>Browsing maps and using the extension need no account. If you sign in, Supabase stores:</p>
+<ul>
+  <li>your email address, to sign you in;</li>
+  <li>your profiles: their names and filter settings;</li>
+  <li>linked devices: a label such as "Chrome extension on Mac", when each was linked and last used, and a
+  one-way hash of its token (not the token itself). Unlink a device on the Profiles page and its token stops working;</li>
+  <li>your votes, strength ratings and edits on maps.</li>
+</ul>
+<p>Email addresses, profiles and devices are visible only to you. Ratings count toward a map's public
+strength values but aren't shown with your name or email.</p>
 
 <h2>Contact</h2>
 <p>Questions or deletion requests: open an issue at

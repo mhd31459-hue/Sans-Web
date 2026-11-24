@@ -76,3 +76,19 @@ td.actions { display: flex; gap: 6px; }
 .prose li { margin: 6px 0; }
 .prose code { color: var(--volt); }
 footer { border-top: 1px solid var(--border); margin-top: 32px; }
+
+/* Account: profile cards */
+.profile { padding: 14px 16px; margin: 0 0 12px; }
+.profile .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.profile .row input { flex: 1; min-width: 140px; font-weight: 700; }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.rule { display: grid; grid-template-columns: 90px 100px 150px 1fr; gap: 8px; align-items: center; margin: 6px 0; }
+.check { display: flex; gap: 8px; align-items: center; margin-top: 10px; cursor: pointer; }
+.check input { accent-color: var(--volt); }
+button.ghost { background: none; color: var(--muted); }
+.auth a { font-size: 13px; }
+@media (max-width: 640px) {
+  .rule { grid-template-columns: 1fr 1fr; }
+  .rule > span:first-child { grid-column: 1 / 3; color: var(--label); }
+  .rule > .small { grid-column: 1 / 3; }
+}

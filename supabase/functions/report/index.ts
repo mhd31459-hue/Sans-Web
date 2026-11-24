@@ -1,11 +1,12 @@
-// POST { service, title, name?, t, category }  →  records a "missed one" report.
+// POST { service, title, name?, t, category, severity? }  →  records a "missed one" report.
 //
 // Sent when a viewer presses the extension's hotkey because something slipped through.
-// Only the playhead time and the category are stored, as a draft segment covering the
+// Only the playhead time, the category and how strong the viewer said it was are stored, as a draft segment covering the
 // moments before and just after the key press. Reports near each other for the same
 // category are merged, so several viewers flagging one scene make one segment.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { CORS, hit, clientKey, TITLE_ID } from "../_shared/guard.ts";
+import { titleMap } from "../_shared/segments.ts";
 
 // A viewer reacts after the fact: cover what they just saw, and (for scenes) a little
 // ahead in case it's still going. A missed swear is over by the time they press the key.
@@ -28,9 +29,12 @@ Deno.serve(async (req) => {
   let b: Record<string, unknown>;
   try { b = await req.json(); } catch { return new Response("bad json", { status: 400, headers: CORS }); }
   const { service, title, name, t, category } = b;
+  // How strong the viewer said it was (the picker's second step). Older extensions don't send it.
+  const severity = b.severity === undefined ? 2 : b.severity;
   if (typeof service !== "string" || !TITLE_ID[service] || typeof title !== "string" || !TITLE_ID[service].test(title) ||
       typeof t !== "number" || !Number.isFinite(t) || t < 0 || t > 86400 ||
-      typeof category !== "string" || !WINDOW[category])
+      typeof category !== "string" || !WINDOW[category] ||
+      typeof severity !== "number" || ![1, 2, 3].includes(severity))
     return new Response("bad request", { status: 400, headers: CORS });
 
   const row: Record<string, unknown> = { service, service_id: title };
@@ -41,22 +45,23 @@ Deno.serve(async (req) => {
 
   let start = Math.max(0, t - WINDOW[category][0]), end = t + WINDOW[category][1];
   // Merge with an overlapping report of the same category instead of stacking duplicates.
-  const { data: near } = await db.from("segments").select("id, start_s, end_s")
+  const { data: near } = await db.from("segments").select("id, start_s, end_s, drafted_severity")
     .eq("title_id", ttl.id).eq("source", "report").eq("category", category).neq("status", "rejected")
     .lte("start_s", end).gte("end_s", start).limit(1);
   let error;
   if (near?.length && Math.max(end, near[0].end_s) - Math.min(start, near[0].start_s) <= MAX_LEN_S) {
     start = Math.min(start, near[0].start_s); end = Math.max(end, near[0].end_s);
-    ({ error } = await db.from("segments").update({ start_s: start, end_s: end }).eq("id", near[0].id));
+    // The strongest report wins until people rate it; ratings then decide (see migration).
+    ({ error } = await db.from("segments").update({
+      start_s: start, end_s: end, drafted_severity: Math.max(near[0].drafted_severity ?? 2, severity),
+    }).eq("id", near[0].id));
   } else {
     ({ error } = await db.from("segments").insert({
-      title_id: ttl.id, start_s: start, end_s: end, category, severity: 2, source: "report", status: "draft",
+      title_id: ttl.id, start_s: start, end_s: end, category, severity, source: "report", status: "draft",
     }));
   }
   if (error) return Response.json({ error: "segment write failed" }, { status: 500, headers: CORS });
 
-  const { data: all } = await db.from("segments")
-    .select("start_s,end_s,category,severity,source").eq("title_id", ttl.id).neq("status", "rejected").order("start_s");
-  const segments = (all ?? []).map(x => ({ start: x.start_s, end: x.end_s, category: x.category, severity: x.severity, source: x.source }));
+  const segments = await titleMap(db, ttl.id);
   return Response.json({ reported: { start, end, category }, segments }, { headers: CORS });
 });

@@ -43,12 +43,13 @@ HOW IT WORKS
 • Press play. Sans looks up a "map" for that title: a list of timestamps, each with a category (profanity, nudity, sex, violence).
 • No map yet? Turn subtitles on and Sans makes one. It reads the subtitles ahead of time and marks each swear word, so the word is muted before it's spoken.
 • Sans uses the service's own player controls to mute, skip or cover each marked moment.
-• Something slipped through? Press Option/Alt+M, then pick what it was. It's filtered right away for you and everyone after you.
+• Profiles: pick who's watching from the Sans icon. Each profile sets mute, skip or cover per category, and how strong something must be before it's filtered (mild and up, moderate and up, or strong only). Kids, Teens and Adults presets included.
+• Something slipped through? Press Option/Alt+M, pick what it was and how strong. It's filtered right away for you and everyone after you. Right after Sans filters something, the same key lets you rate it.
 
 WHAT IT NEVER DOES
 • It never records, captures, copies or downloads video or audio.
 • Maps store only start time, end time and category, never subtitle text.
-• No accounts, ads, analytics or tracking.
+• No ads, analytics or tracking. Accounts are optional, only for syncing profiles and rating scenes.
 
 COMMUNITY MAPS
 Anyone can view maps at https://mhd31459-hue.github.io/Sans-Web and sign in to confirm, correct or add scenes.
@@ -63,17 +64,20 @@ Source code: https://github.com/mhd31459-hue/Sans-Web
 Filters objectionable content (profanity, nudity, sex, violence) while watching Netflix, Prime Video and Disney+ by muting, skipping or covering timestamped moments from shared maps.
 
 **Permission justifications:**
-- `storage` — Saves the viewer's filter choices (mute, skip or cover for each category).
+- `storage` — Saves the viewer's profiles (what each one filters) and, if they link an account, its device token.
 - Host permission `ivwmlkkcimsxcllsilld.supabase.co` — Sans's own server, which returns a title's filter map and makes new maps from subtitle timing.
 - Content scripts on netflix.com, primevideo.com, amazon.com, disneyplus.com — Read the on-screen subtitles and the subtitle file the player loads, and mute, seek or cover the player at mapped times.
+- Content script on mhd31459-hue.github.io/Sans-Web — Sans's own website: lets a signed-in user link the extension to their account so profiles sync.
 
 **Remote code:** No, I am not using remote code. (All JavaScript ships in the package. The server returns only JSON data.)
 
 **Data usage — check:**
 - *Website content* — subtitle text and timestamps from the streaming page are sent to the server to compute mute times (not stored).
+- *Personally identifiable information* — the email address of a linked account, kept locally to show which account is linked.
+- *Authentication information* — the device token of a linked account.
 
-Leave all other data types unchecked (no personal, health, financial, authentication, location,
-communications, activity or history data).
+Leave all other data types unchecked (no health, financial, location, communications, activity or
+history data).
 
 **Certify all three:** not sold to third parties; not used for purposes unrelated to the single
 purpose; not used for creditworthiness or lending.

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sans \u2014 community content filters",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Mutes, skips, or covers scenes on Prime Video, Disney+ and Netflix using community-made timestamp maps. Never copies or captures the video.",
   "icons": {
     "16": "icons/icon16.png",
@@ -14,7 +14,8 @@
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"
@@ -25,7 +26,7 @@
         "default": "Alt+M",
         "mac": "Alt+M"
       },
-      "description": "Report something Sans missed (then press 1–4)"
+      "description": "Report something Sans missed, or rate what it just filtered"
     }
   },
   "permissions": [
@@ -60,6 +61,15 @@
         "loader.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mhd31459-hue.github.io/Sans-Web/*"
+      ],
+      "js": [
+        "site-bridge.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
@@ -74,6 +84,14 @@
         "https://www.amazon.com/*",
         "https://www.disneyplus.com/*",
         "https://www.netflix.com/*"
+      ]
+    },
+    {
+      "resources": [
+        "src/*.js"
+      ],
+      "matches": [
+        "https://mhd31459-hue.github.io/*"
       ]
     }
   ]

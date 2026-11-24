@@ -1,13 +1,15 @@
 // Content script: finds the service's own <video>, fetches the community map for this
 // title, and applies it by MUTING, SEEKING, or COVERING the player — the same controls
 // a viewer has. It never reads, captures, copies, or decrypts the video.
-import { decide, DEFAULT_PREFS, normalize } from "./segments.js";
+import { decide, prepare, DEFAULT_PREFS } from "./segments.js";
 import { parseTTML, parseVTT, looksLikeCaptions, estimateOffset } from "./captions-core.js";
 import { prime } from "./adapters/prime.js";
 import { disney } from "./adapters/disney.js";
 import { netflix } from "./adapters/netflix.js";
 import { API } from "./config.js";
 import { installReportHotkey, reportSegment, toast, fmt } from "./report.js";
+import { activeSettings, refresh as refreshAccount, rate } from "./account.js";
+import { LABELS, STRENGTH } from "./profiles.js";
 
 // The config ships with a placeholder. Until it's replaced, make NO network requests —
 // otherwise caption text gets posted to an address nobody controls.
@@ -15,7 +17,11 @@ const API_READY = !/YOUR-PROJECT/i.test(API);
 
 const adapter = [prime, disney, netflix].find(a => a.matches(location));
 const state = {
-  segments: [], prefs: DEFAULT_PREFS, cues: [], titleId: null, cover: null, weMuted: false,
+  raw: [],            // the title's map as the server sent it (with ids, severity, status)
+  mine: [],           // this viewer's own reports this visit, applied whatever the profile
+  segments: [],       // what the active profile filters: prepare(raw + mine, prefs)
+  prefs: DEFAULT_PREFS, cues: [], titleId: null, cover: null, weMuted: false,
+  lastFiltered: null, // { category, action, start, end, at } for "rate what it just filtered"
   track: [],          // cues from the caption FILE, on the file's clock
   offset: null,       // player time − file time, measured from on-screen captions
   align: null,        // last alignment result, for debugging
@@ -42,10 +48,24 @@ function ensureCover() {
   return (state.cover = el);
 }
 
+// Recompute what the active profile filters. Called when the map or the profile changes.
+function applyMap(serverSegments) {
+  if (serverSegments) state.raw = serverSegments;
+  state.segments = prepare([...state.raw, ...state.mine], state.prefs);
+}
+
+function noteFiltered(t) {
+  const s = state.segments.find(x => t >= x.start && t < x.end);
+  if (!s) return;
+  const action = state.prefs[s.category]?.action;
+  state.lastFiltered = { category: s.category, action, start: s.start, end: s.end, at: Date.now() };
+}
+
 function tick() {
   const v = mainVideo();
   if (!v || !state.segments.length) return;
   const { mute, cover, skipTo } = decide(v.currentTime, state.segments, state.prefs);
+  if (mute || cover || skipTo !== null) noteFiltered(v.currentTime);
   if (skipTo !== null && skipTo > v.currentTime + 0.05) {
     if (adapter.seekViaPage) {
       // Ask the page-context script to seek with the service's own player API; don't
@@ -83,12 +103,13 @@ function watchCaptions() {
 }
 
 async function loadMap() {
-  state.segments = [];
+  state.mine = []; state.lastFiltered = null;
+  applyMap([]);
   state.titleId = adapter.titleId(location);
   if (!state.titleId || !API_READY) return;
   try {
     const r = await fetch(`${API}/map?service=${adapter.name}&title=${encodeURIComponent(state.titleId)}`);
-    if (r.ok) state.segments = normalize((await r.json()).segments || []);
+    if (r.ok) applyMap((await r.json()).segments || []);
   } catch { /* offline / no map yet — play unfiltered */ }
 }
 
@@ -119,7 +140,7 @@ async function sendCues(cues) {
     }
     if (!r.ok) return false;
     const body = await r.json();
-    if (Array.isArray(body.segments)) state.segments = normalize(body.segments);
+    if (Array.isArray(body.segments)) applyMap(body.segments);
     return true;
   } catch { return false; } finally { sending = false; }
 }
@@ -156,27 +177,51 @@ async function syncTrack() {
   if (batch.length && await sendCues(batch)) state.sentUpTo = state.track.length;
 }
 
-// ── "Missed one" report (Alt/Option+M, then 1–4) ───────────────────────────
+// ── "Missed one" report (Alt/Option+M, then 1–4, then how strong) ───────────
 // Applied locally first, so a scene that's still playing is skipped right now and a
 // rewind into it is filtered, then sent so the next viewer gets it too.
-async function report(category) {
+async function report(category, severity) {
   const v = mainVideo();
   if (!v || !state.titleId) { toast("Sans: no title found on this page."); return; }
   const t = v.currentTime;
-  state.segments = normalize([...state.segments, reportSegment(t, category)]);
+  state.mine.push(reportSegment(t, category, severity));
+  applyMap();
   if (!API_READY) return;
   try {
     const r = await fetch(`${API}/report`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ service: adapter.name, title: state.titleId, name: titleName(), t: +t.toFixed(2), category }),
+      body: JSON.stringify({ service: adapter.name, title: state.titleId, name: titleName(), t: +t.toFixed(2), category, severity }),
     });
     if (!r.ok) throw new Error(String(r.status));
     const body = await r.json();
-    if (Array.isArray(body.segments)) state.segments = normalize(body.segments);
-    toast(`Sans: reported ${category} at ${fmt(t)}. Thanks, it's filtered for everyone now.`);
+    if (Array.isArray(body.segments)) applyMap(body.segments);
+    toast(`Sans: reported ${STRENGTH[severity].toLowerCase()} ${LABELS[category].toLowerCase()} at ${fmt(t)}. Thanks, it's filtered for everyone now.`);
   } catch (err) {
     toast(`Sans: filtered here, but the report didn't send (${err.message}).`);
   }
+}
+
+// Rate what Sans just filtered: its strength (1–3), or 0 = it shouldn't be filtered.
+// Needs a linked account, so one person can't flood ratings anonymously.
+async function rateRecent(r, severity) {
+  const ids = state.raw.filter(s => s.id && s.category === r.category && s.start < r.end && s.end > r.start).map(s => s.id);
+  if (!ids.length) { toast("Sans: that was your own report, so there's nothing to rate yet."); return; }
+  try {
+    await rate(ids.slice(0, 10), severity);
+  } catch (err) {
+    toast(err.message === "not linked"
+      ? "Sans: to rate scenes, sign in on the Sans website (click the Sans icon → Sign in)."
+      : `Sans: rating didn't send (${err.message}).`, 5000);
+    return;
+  }
+  // Mirror the server locally so the change applies now (one vote decides, for the test group).
+  state.raw = severity
+    ? state.raw.map(s => ids.includes(s.id) ? { ...s, severity, status: "confirmed" } : s)
+    : state.raw.filter(s => !ids.includes(s.id));
+  applyMap();
+  toast(severity
+    ? `Sans: rated ${STRENGTH[severity].toLowerCase()}. Thanks.`
+    : "Sans: marked as shouldn't be filtered. Thanks.");
 }
 
 // Fallback when no caption file was caught: send what was read off the screen.
@@ -186,10 +231,21 @@ async function submitScreenCues() {
 }
 
 if (adapter) {
-  chrome.storage?.sync.get("prefs", ({ prefs }) => { if (prefs) state.prefs = { ...DEFAULT_PREFS, ...prefs }; });
+  // Who's watching: the popup's active profile. Changes apply mid-title.
+  const loadProfile = async () => { state.prefs = await activeSettings(); applyMap(); };
+  loadProfile();
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && (changes.profiles || changes.activeProfile)) loadProfile();
+  });
+  refreshAccount().catch(() => { /* offline or not linked: use the cached profiles */ });
   loadMap();
   watchCaptions();
-  const hotkey = installReportHotkey({ onPick: report });
+  const hotkey = installReportHotkey({
+    onReport: report,
+    onRate: rateRecent,
+    // Offer "rate it" for 20s after something was filtered.
+    recent: () => state.lastFiltered && Date.now() - state.lastFiltered.at < 20000 ? state.lastFiltered : null,
+  });
   // The browser-level shortcut (manifest "commands" → background.js) arrives as a message.
   chrome.runtime.onMessage?.addListener((msg) => { if (msg?.sansReport) hotkey.toggle(); });
   setInterval(tick, 100);                 // 100ms: fine enough for mute/skip boundaries

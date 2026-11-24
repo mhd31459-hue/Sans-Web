@@ -16,10 +16,27 @@ The database stores **facts** (start, end, category), never caption text or fram
 | profanity | caption lines, matched deterministically | word-level timing, padded for fast speech |
 | sex, violence | Claude drafts from captions, SDH sound cues, uncaptioned gaps and the title | marked `draft` until people confirm |
 | nudity    | Claude drafts, weakly; mostly community correction | captions rarely describe nudity |
-| any       | **"Missed one" hotkey**: viewer presses **Alt/Option+M**, then 1 violence · 2 sex · 3 nudity · 4 language | filtered at once locally and for everyone; `report` drafts merge and are tightened on the website |
+| any       | **"Missed one" hotkey**: viewer presses **Alt/Option+M**, then 1 violence · 2 sex · 3 nudity · 4 language, then 1–3 strength | filtered at once locally and for everyone; `report` drafts merge and are tightened on the website |
 
 Caption text is sent once to `draft-map`, used to draft timestamps, and discarded.
-Reports store only the playhead time and category.
+Reports store only the playhead time, category and strength.
+
+## Strength (severity) and profiles
+
+Every segment has a strength: 1 mild, 2 moderate, 3 strong (definitions in
+`extension/src/profiles.js` → `RUBRIC`, shown wherever people rate).
+
+- **Drafted** by the word list (damn = 1; sh\*t, b\*tch, a\*\*hole… = 2; f-word, c-word = 3),
+  by Claude for scenes, or by the viewer who reported it.
+- **Rated** by people: on the website (Strength column) or in the player (Option/Alt+M → 5,
+  offered for 20 s after Sans filters something; 0 = shouldn't be filtered). The **median**
+  rating replaces the drafted value (`severity_votes` trigger); `drafted_severity` keeps the original.
+- **Profiles** (Kids, Teens, Adults or custom) choose per category: allow / mute / cover / skip,
+  and the weakest strength filtered. "Confirmed only" ignores unreviewed drafts. Pick the
+  profile from the toolbar popup; edit there or at `#/account` on the website.
+- Without an account, profiles live in the browser. Signing in on the website and linking the
+  extension (a device token, `devices` table, `account` function) syncs them and enables
+  rating from the player.
 
 ## Layout
 
@@ -28,6 +45,10 @@ Reports store only the playhead time and category.
 - `supabase/schema.sql` — titles, segments, votes, with row-level security.
 - `supabase/functions/draft-map` — caption → draft segments (Claude).
 - `supabase/functions/map` — map lookup for the extension.
+- `supabase/functions/report` — "missed one" reports.
+- `supabase/functions/account` — linked devices: profiles sync and in-player ratings.
+- `docs/` — the website (GitHub Pages). `docs/profiles.js` is a copy of
+  `extension/src/profiles.js`; a test keeps them identical.
 
 ## Run tests
 

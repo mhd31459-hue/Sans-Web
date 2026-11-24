@@ -6,6 +6,7 @@
 // violence, and nudity are drafted by Claude from dialogue and SDH sound cues
 // ("[moaning]", "[gunshot]"), then marked 'draft' for people to confirm or correct.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { titleMap } from "../_shared/segments.ts";
 import { profanitySegments, type Cue, type Seg } from "../_shared/profanity.ts";
 import { CORS, hit, clientKey, TITLE_ID } from "../_shared/guard.ts";
 
@@ -173,8 +174,6 @@ Deno.serve(async (req) => {
   }
   // Send the title's whole current map back, so the extension can apply it at once —
   // including stretches that haven't played yet.
-  const { data: all } = await db.from("segments")
-    .select("start_s,end_s,category,severity,source").eq("title_id", t.id).neq("status", "rejected").order("start_s");
-  const segments = (all ?? []).map(x => ({ start: x.start_s, end: x.end_s, category: x.category, severity: x.severity, source: x.source }));
+  const segments = await titleMap(db, t.id);
   return Response.json({ drafted: segs.length, aiRan, ai, segments }, { headers: CORS });
 });

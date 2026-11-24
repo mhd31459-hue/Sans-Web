@@ -61,9 +61,12 @@ export function clean(s) {
   return out;
 }
 
-// Which preset these settings match, or null for custom.
-export const presetOf = (s) =>
-  Object.keys(PRESETS).find(k => JSON.stringify(clean(PRESETS[k].settings)) === JSON.stringify(clean(s))) ?? null;
+// Which preset these settings match (ignoring "confirmed only"), or null for custom.
+const rulesKey = (s) => JSON.stringify(CATEGORIES.map(c => clean(s)[c]));
+export const presetOf = (s) => Object.keys(PRESETS).find(k => rulesKey(PRESETS[k].settings) === rulesKey(s)) ?? null;
+
+// A preset's rules, keeping the profile's own "confirmed only" choice.
+export const withPreset = (s, key) => ({ ...clean(PRESETS[key].settings), confirmedOnly: !!s?.confirmedOnly });
 
 // Does this segment get filtered for this profile?
 export function applies(seg, settings) {

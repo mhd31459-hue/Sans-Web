@@ -12,6 +12,15 @@
 export const PROFANITY_SRC =
   "\\b(\\w*fuck\\w*|\\w*shit\\w*|bitch\\w*|cunt\\w*|\\w*asshole\\w*|bastard\\w*|dick|dicks|cock|cocks|pussy|goddamn\\w*|damn|damned|damnit)\\b";
 
+// Strength tiers (1 mild, 2 moderate, 3 strong), so a profile can mute only the
+// stronger words. Everything the pattern matches that isn't listed here is moderate.
+export function wordSeverity(word: string): number {
+  const w = word.toLowerCase();
+  if (/fuck|cunt/.test(w)) return 3;
+  if (/^(damn|damned|damnit)$/.test(w)) return 1;
+  return 2;
+}
+
 export type Cue = { t: number; end?: number; text: string };
 export type Seg = { start: number; end: number; category: string; severity: number; source: string };
 
@@ -51,9 +60,12 @@ export function profanityForCue(c: Cue, nextT?: number): Seg[] {
     if (e - s < MIN_MUTE) { const mid = (s + e) / 2; s = mid - MIN_MUTE / 2; e = mid + MIN_MUTE / 2; }
     s = Math.max(0, Math.max(s, c.t - 0.3));
     e = Math.min(e, end + 0.2);
+    const sev = wordSeverity(m[0]);
     const last = out[out.length - 1];
-    if (last && s <= last.end) last.end = Math.max(last.end, e);   // adjacent swears in one line
-    else out.push({ start: +s.toFixed(2), end: +e.toFixed(2), category: "profanity", severity: 2, source: "captions" });
+    // Adjacent swears in one line share a mute only when they're the same strength;
+    // otherwise "damn, f—" would mute the mild word for a strong-only profile.
+    if (last && s <= last.end && last.severity === sev) last.end = Math.max(last.end, e);
+    else out.push({ start: +s.toFixed(2), end: +e.toFixed(2), category: "profanity", severity: sev, source: "captions" });
   }
   for (const o of out) o.end = +o.end.toFixed(2);
   return out;

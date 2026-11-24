@@ -1,6 +1,6 @@
 // Toolbar popup: choose who's watching and edit their filters. Changes apply to any
 // playing title at once (the player listens for storage changes).
-import { CATEGORIES, LABELS, STRENGTH, ACTIONS, RUBRIC, PRESETS, presetOf, newProfile } from "./src/profiles.js";
+import { CATEGORIES, LABELS, STRENGTH, ACTIONS, RUBRIC, PRESETS, presetOf, withPreset, newProfile } from "./src/profiles.js";
 import { loadState, saveProfiles, setActive, refresh, unlink } from "./src/account.js";
 import { SITE } from "./src/config.js";
 
@@ -75,7 +75,7 @@ $("name").onchange = async (e) => { current().name = e.target.value.trim() || "U
 $("presets").onclick = async (e) => {
   const k = e.target.dataset?.preset;
   if (!k) return;
-  current().settings = structuredClone(PRESETS[k].settings);
+  current().settings = withPreset(current().settings, k);
   render(); await save();
 };
 $("cats").onchange = async (e) => {

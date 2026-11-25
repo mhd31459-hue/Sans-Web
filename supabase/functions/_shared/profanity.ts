@@ -45,7 +45,62 @@ export function spokenText(text: string): string {
     .replace(/\s+/g, " ").trim();
 }
 
-export function profanityForCue(c: Cue, nextT?: number): Seg[] {
+// ── Blasphemy: God's or Jesus's name as an exclamation or oath ─────────────────
+// Matched as PHRASES IN CONTEXT, never the bare word, so "God bless you", "Jesus said
+// to them", "believe in God" or a character named Jesús are left alone. A name counts
+// only where it's used as an interjection: at the start of a sentence (or after "oh",
+// a dash, or a speaker change) AND followed by punctuation or the end of the line —
+// "Jesus, what happened?", "God!", "Christ." — or inside a fixed oath like "for God's
+// sake". Each phrase carries its strength (1 mild idiom, 2 exclamation, 3 strong oath).
+//
+// START: the name begins a sentence, follows "oh"/"sweet"/"holy"/"good", or a dash.
+const START = "(?<=^|[.!?…]\\s*|[-—–]\\s*|\\boh,?\\s+|\\bsweet\\s+|\\bholy\\s+|\\bgood\\s+)";
+// EXCL: what follows an interjection — punctuation or the end of the line.
+const EXCL = "(?=\\s*(?:[,.!?…—–-]|$))";
+export const BLASPHEMY: [RegExp, number][] = [
+  // 3 — strong oaths
+  [/\bgod[\s-]*damn\w*|\bgoddam\w*|\bgod[\s-]*dammit\b/gi, 3],
+  [/\bjesus\s+(?:\w*fuck\w*|h\.?)\s+christ\b/gi, 3],
+  // 2 — exclamations
+  [/\boh,?\s+my\s+god\b/gi, 2],                                     // "Oh my God" in any position
+  [new RegExp(`\\bmy\\s+god${EXCL}`, "gi"), 2],                   // "My God!" but not "my God is good"
+  [/\boh,?\s+god\b/gi, 2],
+  [new RegExp(`\\b(?:good|sweet|great)\\s+god${EXCL}`, "gi"), 2],
+  [new RegExp(`\\b(?:god|lord)\\s+almighty${EXCL}`, "gi"), 2],
+  [/\bfor\s+(?:god|christ|jesus|jesus\s+christ)'?s\s+sake\b/gi, 2],
+  [/\bomg\b/gi, 2],
+  [/\bchrist\s+almighty\b/gi, 2],
+  [new RegExp(`${START}god${EXCL}`, "gi"), 2],                    // "God, I hate this." / "God!"
+  [new RegExp(`${START}(?:jesus(?:\\s+christ)?|christ)${EXCL}`, "gi"), 2],   // "Jesus!", "Jesus Christ, man"
+  // 1 — mild idioms
+  [/\bthank\s+god\b/gi, 1],
+  [/\bgod\s+(?:knows|forbid|help\s+(?:me|us|you|him|her|them))\b/gi, 1],
+  [/\b(?:swear|hand)\s+to\s+(?:god|christ)\b|\bhonest\s+to\s+god\b/gi, 1],
+  [new RegExp(`\\b(?:oh|good|sweet)\\s+lord${EXCL}`, "gi"), 1],
+];
+
+type Hit = { i: number; len: number; severity: number; category: string };
+
+// Every blasphemous phrase in a line, overlaps resolved: "Oh my God" is one phrase,
+// not also "my God" and "oh God"; the stronger (then longer) match wins.
+export function blasphemyHits(spoken: string): Hit[] {
+  const all: Hit[] = [];
+  for (const [re, severity] of BLASPHEMY)
+    for (const m of spoken.matchAll(re)) all.push({ i: m.index ?? 0, len: m[0].length, severity, category: "blasphemy" });
+  all.sort((a, b) => b.severity - a.severity || b.len - a.len);
+  const kept: Hit[] = [];
+  for (const h of all)
+    if (!kept.some(k => h.i < k.i + k.len && k.i < h.i + h.len)) kept.push(h);
+  return kept.sort((a, b) => a.i - b.i);
+}
+
+function profanityHits(spoken: string): Hit[] {
+  return [...spoken.matchAll(new RegExp(PROFANITY_SRC, "gi"))]
+    .map(m => ({ i: m.index ?? 0, len: m[0].length, severity: wordSeverity(m[0]), category: "profanity" }));
+}
+
+// Turns matches in one cue into timed segments (word-level timing, see the top).
+function timedSegments(c: Cue, nextT: number | undefined, find: (spoken: string) => Hit[]): Seg[] {
   const spoken = spokenText(c.text);
   if (!spoken) return [];
   // Cues read off the screen have no end time; fall back to the next cue, capped.
@@ -53,24 +108,26 @@ export function profanityForCue(c: Cue, nextT?: number): Seg[] {
   const dur = Math.min(Math.max(end - c.t, 0.5), 8);
   const n = spoken.length;
   const out: Seg[] = [];
-  for (const m of spoken.matchAll(new RegExp(PROFANITY_SRC, "gi"))) {
-    const i = m.index ?? 0;
-    let s = c.t + Math.min(dur * (i / n), i / FAST_CPS) - PAD_BEFORE;
-    let e = c.t + dur * ((i + m[0].length) / n) + PAD_AFTER;
+  for (const h of find(spoken)) {
+    let s = c.t + Math.min(dur * (h.i / n), h.i / FAST_CPS) - PAD_BEFORE;
+    let e = c.t + dur * ((h.i + h.len) / n) + PAD_AFTER;
     if (e - s < MIN_MUTE) { const mid = (s + e) / 2; s = mid - MIN_MUTE / 2; e = mid + MIN_MUTE / 2; }
     s = Math.max(0, Math.max(s, c.t - 0.3));
     e = Math.min(e, end + 0.2);
-    const sev = wordSeverity(m[0]);
     const last = out[out.length - 1];
-    // Adjacent swears in one line share a mute only when they're the same strength;
+    // Adjacent matches in one line share a mute only when they're the same strength;
     // otherwise "damn, f—" would mute the mild word for a strong-only profile.
-    if (last && s <= last.end && last.severity === sev) last.end = Math.max(last.end, e);
-    else out.push({ start: +s.toFixed(2), end: +e.toFixed(2), category: "profanity", severity: sev, source: "captions" });
+    if (last && s <= last.end && last.severity === h.severity) last.end = Math.max(last.end, e);
+    else out.push({ start: +s.toFixed(2), end: +e.toFixed(2), category: h.category, severity: h.severity, source: "captions" });
   }
   for (const o of out) o.end = +o.end.toFixed(2);
   return out;
 }
 
+export const profanityForCue = (c: Cue, nextT?: number): Seg[] => timedSegments(c, nextT, profanityHits);
+export const blasphemyForCue = (c: Cue, nextT?: number): Seg[] => timedSegments(c, nextT, blasphemyHits);
+
+// Both word lists, from the subtitles: swears ("profanity") and God's name ("blasphemy").
 export function profanitySegments(cues: Cue[]): Seg[] {
-  return cues.flatMap((c, i) => profanityForCue(c, cues[i + 1]?.t));
+  return cues.flatMap((c, i) => [...profanityForCue(c, cues[i + 1]?.t), ...blasphemyForCue(c, cues[i + 1]?.t)]);
 }

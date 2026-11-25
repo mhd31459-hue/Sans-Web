@@ -6,7 +6,18 @@ import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 import { fmt, parse, esc } from "./time.js";
 import { CATEGORIES, LABELS, STRENGTH, ACTIONS, RUBRIC, PRESETS, presetOf, withPreset, clean } from "./profiles.js";
 
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+// By default supabase-js shares one browser-wide lock between every tab of this site, so
+// a single stuck tab (e.g. one still running an older, buggy version) left every other
+// tab on "Loading…" forever. Calls within this tab are still queued by supabase-js
+// itself; tabs no longer wait on each other.
+const db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { lock: (_name, _timeout, fn) => fn() },
+});
+// If nothing has rendered after 12s, say so instead of "Loading…" forever.
+setTimeout(() => {
+  if (/Loading…/.test(view.textContent) && view.children.length <= 1)
+    view.innerHTML = notice("This is taking too long. Check your connection, close other Sans Maps tabs, and reload.", true);
+}, 12000);
 const CATS = ["profanity", "nudity", "sex", "violence"];
 const SERVICE = { prime: "Prime Video", disney: "Disney+", netflix: "Netflix" };
 const view = document.getElementById("view");

@@ -12,7 +12,7 @@ import { titleMap } from "../_shared/segments.ts";
 // ahead in case it's still going. A missed swear is over by the time they press the key.
 // The extension uses the same windows (src/report.js) so its instant local fix matches.
 const WINDOW: Record<string, [number, number]> = {
-  profanity: [8, 1], nudity: [20, 10], sex: [20, 10], violence: [20, 10],
+  profanity: [8, 1], blasphemy: [8, 1], nudity: [20, 10], sex: [20, 10], violence: [20, 10],
 };
 const MAX_LEN_S = 300;  // merged reports never grow past five minutes
 const LIMIT = { windowS: 600, max: 20 };   // per viewer, 10 minutes

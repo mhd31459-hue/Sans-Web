@@ -40,7 +40,7 @@ Mute swearing and skip or cover scenes on Netflix, Prime Video and Disney+, usin
 Sans filters the shows you already watch. It mutes swearing and can skip or cover scenes on Netflix, Prime Video and Disney+.
 
 HOW IT WORKS
-• Press play. Sans looks up a "map" for that title: a list of timestamps, each with a category (profanity, nudity, sex, violence).
+• Press play. Sans looks up a "map" for that title: a list of timestamps, each with a category (profanity, blasphemy, nudity, sex, violence).
 • No map yet? Turn subtitles on and Sans makes one. It reads the subtitles ahead of time and marks each swear word, so the word is muted before it's spoken.
 • Sans uses the service's own player controls to mute, skip or cover each marked moment.
 • Profiles: pick who's watching from the Sans icon. Each profile sets mute, skip or cover per category, and how strong something must be before it's filtered (mild and up, moderate and up, or strong only). Kids, Teens and Adults presets included.
@@ -61,7 +61,7 @@ Source code: https://github.com/mhd31459-hue/Sans-Web
 ## Privacy tab
 
 **Single purpose:**
-Filters objectionable content (profanity, nudity, sex, violence) while watching Netflix, Prime Video and Disney+ by muting, skipping or covering timestamped moments from shared maps.
+Filters objectionable content (profanity, blasphemy, nudity, sex, violence) while watching Netflix, Prime Video and Disney+ by muting, skipping or covering timestamped moments from shared maps.
 
 **Permission justifications:**
 - `storage` — Saves the viewer's profiles (what each one filters) and, if they link an account, its device token.

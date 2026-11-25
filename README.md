@@ -26,11 +26,15 @@ Reports store only the playhead time, category and strength.
 Every segment has a strength: 1 mild, 2 moderate, 3 strong (definitions in
 `extension/src/profiles.js` → `RUBRIC`, shown wherever people rate).
 
-- **Drafted** by the word list (damn = 1; sh\*t, b\*tch, a\*\*hole… = 2; f-word, c-word = 3),
-  by Claude for scenes, or by the viewer who reported it.
-- **Rated** by people: on the website (Strength column) or in the player (Option/Alt+M → 5,
-  offered for 20 s after Sans filters something; 0 = shouldn't be filtered). The **median**
-  rating replaces the drafted value (`severity_votes` trigger); `drafted_severity` keeps the original.
+- **Drafted** by the word lists (damn = 1; sh\*t, b\*tch, a\*\*hole… = 2; f-word, c-word = 3;
+  and **blasphemy**, God's or Jesus's name as an exclamation, matched by phrase and context:
+  "thank God" = 1, "oh my God" / "Jesus!" = 2, "goddamn" = 3), by Claude for scenes, or by
+  the viewer who reported it.
+- **Rated** by people: on the website (Strength column) or in the player (Option/Alt+M → 6,
+  offered for 20 s after Sans filters something; 0 = shouldn't be filtered). Once two or more
+  people have rated it, the **median** replaces the drafted value (`severity_votes` trigger); `drafted_severity` keeps the original.
+- **Votes** confirm a segment at net +2 and remove it at net −3 (`vote_status()`), so no
+  single person decides for everyone.
 - **Profiles** (Kids, Teens, Adults or custom) choose per category: allow / mute / cover / skip,
   and the weakest strength filtered. "Confirmed only" ignores unreviewed drafts. Pick the
   profile from the toolbar popup; edit there or at `#/account` on the website.

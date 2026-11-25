@@ -21,6 +21,7 @@ export function prepare(raw, settings) {
 }
 
 export function decide(t, segments, prefs = DEFAULT_PREFS) {
+  prefs = clean(prefs);   // older saved prefs lack newer categories (e.g. blasphemy)
   let mute = false, cover = false, skipTo = null;
   for (const s of segments) {
     if (t < s.start || t >= s.end) continue;

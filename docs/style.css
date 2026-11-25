@@ -3,7 +3,7 @@
   color-scheme: dark;
   --volt: #e0ff00; --bg: #121212; --surface: #1c1c1c; --surface-2: #232323; --border: #2e2e2e;
   --text: #e1e1e1; --label: #b3b3b3; --muted: #6b6b6b; --danger: #ff5c5c;
-  --profanity: #ffb020; --nudity: #ff4fa3; --sex: #b26bff; --violence: #ff4d4d;
+  --profanity: #ffb020; --blasphemy: #4fc3ff; --nudity: #ff4fa3; --sex: #b26bff; --violence: #ff4d4d;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
@@ -48,7 +48,7 @@ button:disabled { opacity: .35; cursor: default; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font: 600 11px var(--mono); padding: 3px 9px; border-radius: 999px; color: #000; white-space: nowrap; }
 .chip.profanity { background: var(--profanity); } .chip.nudity { background: var(--nudity); }
-.chip.sex { background: var(--sex); } .chip.violence { background: var(--violence); }
+.chip.blasphemy { background: var(--blasphemy); } .chip.sex { background: var(--sex); } .chip.violence { background: var(--violence); }
 .badge { font: 11px var(--mono); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--label); }
 .badge.confirmed { border-color: var(--volt); color: var(--volt); }
 

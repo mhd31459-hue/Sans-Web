@@ -18,7 +18,7 @@ setTimeout(() => {
   if (/Loading…/.test(view.textContent) && view.children.length <= 1)
     view.innerHTML = notice("This is taking too long. Check your connection, close other Sans Maps tabs, and reload.", true);
 }, 12000);
-const CATS = ["profanity", "nudity", "sex", "violence"];
+const CATS = CATEGORIES;   // profanity, blasphemy, nudity, sex, violence
 const SERVICE = { prime: "Prime Video", disney: "Disney+", netflix: "Netflix" };
 const view = document.getElementById("view");
 let user = null;
@@ -213,7 +213,7 @@ async function insertHuman(titleId, start, end, category, severity) {
     source: "human", status: "draft", author: user.id,
   }).select("id").single();
   if (error) { showMsg("Couldn't save: " + error.message, true); return null; }
-  // The author's own vote confirms it (test-group thresholds are ±1).
+  // The author's own vote counts toward confirming it (net +2 confirms; see the votes migration).
   await db.from("votes").upsert({ segment_id: data.id, user_id: user.id, vote: 1 });
   myVotes.set(data.id, 1);
   return data.id;

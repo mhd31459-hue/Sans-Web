@@ -214,14 +214,15 @@ async function rateRecent(r, severity) {
       : `Sans: rating didn't send (${err.message}).`, 5000);
     return;
   }
-  // Mirror the server locally so the change applies now (one vote decides, for the test group).
+  // Apply the viewer's own rating here at once. For everyone else it changes only once
+  // others agree (strength: 2+ ratings; removal: net -3 votes; see the votes migration).
   state.raw = severity
-    ? state.raw.map(s => ids.includes(s.id) ? { ...s, severity, status: "confirmed" } : s)
+    ? state.raw.map(s => ids.includes(s.id) ? { ...s, severity } : s)
     : state.raw.filter(s => !ids.includes(s.id));
   applyMap();
   toast(severity
-    ? `Sans: rated ${STRENGTH[severity].toLowerCase()}. Thanks.`
-    : "Sans: marked as shouldn't be filtered. Thanks.");
+    ? `Sans: rated ${STRENGTH[severity].toLowerCase()}. Thanks. It changes for everyone once another viewer agrees.`
+    : "Sans: unfiltered for you. It's removed for everyone once a few more viewers agree.", 5000);
 }
 
 // Fallback when no caption file was caught: send what was read off the screen.

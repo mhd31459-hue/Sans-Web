@@ -1,6 +1,6 @@
 // "Missed one" hotkey: Alt+M (Option+M on a Mac) opens a small picker over the player.
-//   1–4 picks what slipped through, then 1–3 how strong it was (Enter or a pause = moderate).
-//   5 (offered right after Sans filtered something) rates THAT: 1–3, or 0 = shouldn't be filtered.
+//   1–5 picks what slipped through, then 1–3 how strong it was (Enter or a pause = moderate).
+//   6 (offered right after Sans filtered something) rates THAT: 1–3, or 0 = shouldn't be filtered.
 // A report is applied at once (so a scene still playing is skipped now) and sent to the
 // server as a draft for others to tighten. Plain DOM, no service-specific code, so it
 // ports to Firefox and Safari unchanged.
@@ -8,9 +8,9 @@ import { LABELS, RUBRIC, STRENGTH } from "./profiles.js";
 
 // Seconds [before, after] the key press. Must match supabase/functions/report/index.ts.
 export const REPORT_WINDOW = {
-  profanity: [8, 1], nudity: [20, 10], sex: [20, 10], violence: [20, 10],
+  profanity: [8, 1], blasphemy: [8, 1], nudity: [20, 10], sex: [20, 10], violence: [20, 10],
 };
-const CATS = ["violence", "sex", "nudity", "profanity"];           // keys 1–4
+const CATS = ["violence", "sex", "nudity", "profanity", "blasphemy"];   // keys 1–5
 const VERB = { mute: "muted", cover: "covered", skip: "skipped" };
 export const reportSegment = (t, category, severity = 2) => ({
   start: Math.max(0, +(t - REPORT_WINDOW[category][0]).toFixed(2)),
@@ -112,7 +112,7 @@ export function installReportHotkey({ onReport, onRate, recent = () => null }) {
     const r = recent();
     show("SANS · missed something?",
       [...CATS.map((c, i) => [i + 1, LABELS[c], () => strength(c)]),
-       ...(r ? [[5, `Rate the ${LABELS[r.category].toLowerCase()} it just ${VERB[r.action] ?? "filtered"}`, () => rateIt(r)]] : [])],
+       ...(r ? [[6, `Rate the ${LABELS[r.category].toLowerCase()} it just ${VERB[r.action] ?? "filtered"}`, () => rateIt(r)]] : [])],
       "Esc to cancel");
   };
 

@@ -358,17 +358,23 @@ function renderExtension() {
   el.querySelector("#link").onclick = linkExtension;
 }
 
-async function linkExtension() {
+async function linkExtension(e) {
+  const btn = e?.currentTarget;
+  if (btn) { btn.disabled = true; btn.textContent = "Linking…"; }
+  const fail = (text) => { if (btn) { btn.disabled = false; btn.textContent = `Link the extension to ${user?.email ?? "this account"}`; } showMsg(text, true); };
   const { data: { session } } = await db.auth.getSession();
-  if (!session) return showMsg("Sign in again first.", true);
+  if (!session) return fail("Sign in again first.");
   const os = /Mac/.test(navigator.userAgent) ? "Mac" : /Windows/.test(navigator.userAgent) ? "Windows" : /CrOS/.test(navigator.userAgent) ? "ChromeOS" : "Linux";
-  const r = await fetch(`${API}/account`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify({ action: "link", label: `Chrome extension on ${os}` }),
-  });
-  const body = await r.json().catch(() => ({}));
-  if (!r.ok) return showMsg("Couldn't link: " + (body.error ?? r.status), true);
+  let r, body;
+  try {
+    r = await fetch(`${API}/account`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: "link", label: `Chrome extension on ${os}` }),
+    });
+    body = await r.json().catch(() => ({}));
+  } catch (err) { return fail("Couldn't reach the server: " + err.message); }
+  if (!r.ok) return fail("Couldn't link: " + (body.error ?? r.status));
   toExt({ type: "link", token: body.token, email: body.email });
   // The extension uploads its profiles if the account has none; show them.
   setTimeout(renderAccount, 1500);

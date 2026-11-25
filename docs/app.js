@@ -37,11 +37,19 @@ async function renderAuth() {
   }
 }
 
-db.auth.onAuthStateChange(async (_e, session) => {
+// The callback must not await Supabase calls: supabase-js runs it while holding its auth
+// lock, and every query waits for that lock, so the page hung on "Loading…" (and every
+// button after it) whenever someone was signed in. Do the work after the callback returns.
+let authRun = 0;
+db.auth.onAuthStateChange((_e, session) => {
   user = session?.user ?? null;
-  await loadMyVotes();
-  renderAuth();
-  route();
+  const run = ++authRun;
+  setTimeout(async () => {
+    try { await loadMyVotes(); } catch (err) { console.warn("Sans: couldn't load your votes", err); }
+    if (run !== authRun) return;   // a newer sign-in/out arrived meanwhile
+    renderAuth();
+    route();
+  }, 0);
 });
 
 async function loadMyVotes() {

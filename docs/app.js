@@ -245,10 +245,13 @@ async function renderAccount() {
       ${notice("Sign in (top right) to keep filter profiles in your account and use them on every device.")}`;
     return;
   }
+  const who = user.id;
   const [{ data, error }, { data: devices }] = await Promise.all([
     db.from("household_profiles").select("id, name, settings, position").order("position").order("created_at"),
     db.from("devices").select("id, label, created_at, last_seen").order("created_at"),
   ]);
+  // Signed out (or switched accounts) while this was loading: a newer render has the page.
+  if (user?.id !== who || !location.hash.startsWith("#/account")) return;
   if (error) { view.innerHTML = notice(error.message, true); return; }
   profiles = data.map(p => ({ ...p, settings: clean(p.settings) }));
   view.innerHTML = `<p><a href="#/">← All maps</a></p>

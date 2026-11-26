@@ -52,3 +52,17 @@ test("blasphemy becomes its own timed segments next to swear words", () => {
   assert.equal(b.source, "captions");
   assert.deepEqual(blasphemyForCue({ t: 5, end: 7, text: "[organ music] God bless." }), []);
 });
+
+test("hell: as a curse or intensifier, not the place", () => {
+  assert.deepEqual(hits("What the hell is that?"), [["the hell", 1]]);
+  assert.deepEqual(hits("Get the hell out of here."), [["the hell", 1]]);
+  assert.deepEqual(hits("That was a hell of a game."), [["hell of a", 1]]);
+  assert.deepEqual(hits("It's cold as hell."), [["as hell", 1]]);
+  assert.deepEqual(hits("Hell no."), [["hell no", 1]]);
+  assert.deepEqual(hits("Hell, I don't know."), [["hell", 1]]);
+  assert.deepEqual(hits("Go to hell!"), [["go to hell", 2]]);
+  assert.deepEqual(hits("You can rot in hell."), [["rot in hell", 2]]);
+  assert.deepEqual(hits("To hell with you."), [["to hell with", 2]]);
+  for (const line of ["Do you believe in hell?", "Heaven and hell.", "Dinner at Hell's Kitchen.", "Hello, shell.", "Hellboy is here."])
+    assert.deepEqual(hits(line), [], line);
+});

@@ -1,4 +1,5 @@
-// POST { service, title, name?, t, category, severity? }  →  records a "missed one" report.
+// POST { service, title, name?, t, category, severity?, start?, end? }  →  records a "missed one" report.
+// start/end: the exact word or moment the viewer picked from the subtitles (language, blasphemy).
 //
 // Sent when a viewer presses the extension's hotkey because something slipped through.
 // Only the playhead time, the category and how strong the viewer said it was are stored, as a draft segment covering the
@@ -29,6 +30,13 @@ Deno.serve(async (req) => {
   let b: Record<string, unknown>;
   try { b = await req.json(); } catch { return new Response("bad json", { status: 400, headers: CORS }); }
   const { service, title, name, t, category } = b;
+  // The exact word or moment the viewer picked (language and blasphemy), if any: short,
+  // and near the playhead.
+  const exact = typeof b.start === "number" && typeof b.end === "number";
+  if (exact && !(Number.isFinite(b.start) && Number.isFinite(b.end) && (b.start as number) >= 0 &&
+      (b.end as number) > (b.start as number) && (b.end as number) - (b.start as number) <= 10 &&
+      typeof t === "number" && (b.end as number) >= t - 60 && (b.start as number) <= t + 5))
+    return new Response("bad span", { status: 400, headers: CORS });
   // How strong the viewer said it was (the picker's second step). Older extensions don't send it.
   const severity = b.severity === undefined ? 2 : b.severity;
   if (typeof service !== "string" || !TITLE_ID[service] || typeof title !== "string" || !TITLE_ID[service].test(title) ||
@@ -43,7 +51,8 @@ Deno.serve(async (req) => {
     .upsert(row, { onConflict: "service,service_id" }).select("id").single();
   if (te || !ttl) return Response.json({ error: "title write failed" }, { status: 500, headers: CORS });
 
-  let start = Math.max(0, t - WINDOW[category][0]), end = t + WINDOW[category][1];
+  let start = exact ? b.start as number : Math.max(0, t - WINDOW[category][0]);
+  let end = exact ? b.end as number : t + WINDOW[category][1];
   // Merge with an overlapping report of the same category instead of stacking duplicates.
   const { data: near } = await db.from("segments").select("id, start_s, end_s, drafted_severity")
     .eq("title_id", ttl.id).eq("source", "report").eq("category", category).neq("status", "rejected")

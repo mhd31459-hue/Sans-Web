@@ -19,8 +19,8 @@ export const ACTIONS = {
 
 // What each strength means, shown next to the setting and used to rate scenes.
 export const RUBRIC = {
-  profanity: { 1: "damn", 2: "sh*t, b*tch, a**hole, bastard, d*ck, goddamn", 3: "f-word, c-word" },
-  blasphemy: { 1: "thank God, God knows, swear to God, good Lord", 2: "oh my God, Jesus!, Jesus Christ!, for God's sake", 3: "goddamn, Jesus H. Christ" },
+  profanity: { 1: "damn, ass", 2: "sh*t, b*tch, a**hole, bastard, d*ck, goddamn", 3: "f-word, c-word" },
+  blasphemy: { 1: "what the hell, thank God, God knows, swear to God", 2: "oh my God, Jesus!, Jesus Christ!, go to hell", 3: "goddamn, Jesus H. Christ" },
   nudity:    { 1: "brief or partial, non-sexual", 2: "clear nudity", 3: "prolonged or full-frontal" },
   sex:       { 1: "kissing in bed, implied, cut away", 2: "sex scene, no explicit nudity", 3: "explicit sex scene" },
   violence:  { 1: "fighting, peril, little blood", 2: "shootings, blood, injury", 3: "gore, torture, brutal deaths" },

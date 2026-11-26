@@ -68,3 +68,14 @@ test("compounds still caught; ordinary words still not", () => {
   for (const t of ["That's bullshit.", "motherfucker", "dipshit"]) assert.equal(profanityForCue({ t: 0, end: 2, text: t }).length, 1, t);
   for (const t of ["Dickens", "the cockpit", "shiitake"]) assert.equal(profanityForCue({ t: 0, end: 2, text: t }).length, 0, t);
 });
+
+test("ass: itself and known compounds are mild; ordinary words are not caught", async () => {
+  const { PROFANITY_SRC, wordSeverity } = await import("../supabase/functions/_shared/profanity.ts");
+  const found = (line) => [...line.matchAll(new RegExp(PROFANITY_SRC, "gi"))].map(m => m[0].toLowerCase());
+  assert.deepEqual(found("Get your ass in here, jackass."), ["ass", "jackass"]);
+  assert.deepEqual(found("A half-assed plan by a dumbass."), ["half-assed", "dumbass"]);
+  assert.deepEqual(found("Kiss my ass. Asses."), ["ass", "asses"]);
+  assert.deepEqual(found("Pass the glass of bass to the class; assess the assassin's mass."), []);
+  assert.equal(wordSeverity("ass"), 1); assert.equal(wordSeverity("jackass"), 1);
+  assert.equal(wordSeverity("asshole"), 2);
+});

@@ -177,25 +177,27 @@ async function syncTrack() {
   if (batch.length && await sendCues(batch)) state.sentUpTo = state.track.length;
 }
 
-// ── "Missed one" report (Alt/Option+M, then 1–4, then how strong) ───────────
+// ── "Missed one" report (Alt/Option+M, then the category, then how strong) ──
 // Applied locally first, so a scene that's still playing is skipped right now and a
 // rewind into it is filtered, then sent so the next viewer gets it too.
-async function report(category, severity) {
+// span: the exact word or moment the viewer picked (language and blasphemy), if any.
+async function report(category, severity, span = null) {
   const v = mainVideo();
   if (!v || !state.titleId) { toast("Sans: no title found on this page."); return; }
   const t = v.currentTime;
-  state.mine.push(reportSegment(t, category, severity));
+  state.mine.push(reportSegment(t, category, severity, span));
   applyMap();
   if (!API_READY) return;
   try {
     const r = await fetch(`${API}/report`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ service: adapter.name, title: state.titleId, name: titleName(), t: +t.toFixed(2), category, severity }),
+      body: JSON.stringify({ service: adapter.name, title: state.titleId, name: titleName(), t: +t.toFixed(2), category, severity,
+        ...(span ? { start: span.start, end: span.end } : {}) }),
     });
     if (!r.ok) throw new Error(String(r.status));
     const body = await r.json();
     if (Array.isArray(body.segments)) applyMap(body.segments);
-    toast(`Sans: reported ${STRENGTH[severity].toLowerCase()} ${LABELS[category].toLowerCase()} at ${fmt(t)}. Thanks, it's filtered for everyone now.`);
+    toast(`Sans: reported ${STRENGTH[severity].toLowerCase()} ${LABELS[category].toLowerCase()} at ${fmt(span ? span.start : t)}. Thanks, it's filtered for everyone now.`);
   } catch (err) {
     toast(`Sans: filtered here, but the report didn't send (${err.message}).`);
   }
@@ -225,6 +227,25 @@ async function rateRecent(r, severity) {
     : "Sans: unfiltered for you. It's removed for everyone once a few more viewers agree.", 5000);
 }
 
+// The last few subtitle lines before the playhead, on the player's clock, for picking the
+// exact word that slipped through. The caption FILE once aligned (exact start and end),
+// else the lines read off the screen (end = the next line, capped).
+function recentLines(now, back = 25, max = 6) {
+  let ls;
+  if (state.offset !== null && state.track.length)
+    ls = state.track.map(c => ({ start: c.start + state.offset, end: c.end + state.offset, text: c.text }));
+  else ls = state.cues.map((c, i) => ({ start: c.t, end: Math.min(state.cues[i + 1]?.t ?? c.t + 3, c.t + 4), text: c.text }));
+  return ls.filter(l => l.start <= now + 0.5 && l.end >= now - back).slice(-max);
+}
+
+// Pause for the word picker; the returned function plays again only if it was playing.
+function hold() {
+  const v = mainVideo();
+  if (!v || v.paused) return () => {};
+  v.pause();
+  return () => { mainVideo()?.play().catch(() => {}); };
+}
+
 // Fallback when no caption file was caught: send what was read off the screen.
 async function submitScreenCues() {
   if (state.track.length || state.cues.length < 30) return;
@@ -246,6 +267,9 @@ if (adapter) {
     onRate: rateRecent,
     // Offer "rate it" for 20s after something was filtered.
     recent: () => state.lastFiltered && Date.now() - state.lastFiltered.at < 20000 ? state.lastFiltered : null,
+    lines: () => recentLines(mainVideo()?.currentTime ?? 0),
+    now: () => mainVideo()?.currentTime ?? 0,
+    hold,
   });
   // The browser-level shortcut (manifest "commands" → background.js) arrives as a message.
   chrome.runtime.onMessage?.addListener((msg) => { if (msg?.sansReport) hotkey.toggle(); });

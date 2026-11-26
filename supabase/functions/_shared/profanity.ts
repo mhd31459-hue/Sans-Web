@@ -10,7 +10,9 @@
 // \w* on both sides of the strong roots catches compounds (bullshit, motherfucker);
 // short words that are substrings of ordinary words keep strict boundaries.
 export const PROFANITY_SRC =
-  "\\b(\\w*fuck\\w*|\\w*shit\\w*|bitch\\w*|cunt\\w*|\\w*asshole\\w*|bastard\\w*|dick|dicks|cock|cocks|pussy|goddamn\\w*|damn|damned|damnit)\\b";
+  "\\b(\\w*fuck\\w*|\\w*shit\\w*|bitch\\w*|cunt\\w*|\\w*asshole\\w*|bastard\\w*|dick|dicks|cock|cocks|pussy|goddamn\\w*|damn|damned|damnit|" +
+  // "ass" only as itself or in known compounds, never inside pass, class, bass, assess.
+  "(?:jack|dumb|bad|smart|kick|wise|fat|lard|hard|tight|half-?|candy|dip|lame|sweet|kiss-?)?ass(?:es|ed)?)\\b";
 
 // Strength tiers (1 mild, 2 moderate, 3 strong), so a profile can mute only the
 // stronger words. Everything the pattern matches that isn't listed here is moderate.
@@ -18,6 +20,7 @@ export function wordSeverity(word: string): number {
   const w = word.toLowerCase();
   if (/fuck|cunt/.test(w)) return 3;
   if (/^(damn|damned|damnit)$/.test(w)) return 1;
+  if (/ass(es|ed)?$/.test(w)) return 1;            // ass, jackass, half-assed (asshole stays moderate)
   return 2;
 }
 
@@ -77,6 +80,11 @@ export const BLASPHEMY: [RegExp, number][] = [
   [/\bgod\s+(?:knows|forbid|help\s+(?:me|us|you|him|her|them))\b/gi, 1],
   [/\b(?:swear|hand)\s+to\s+(?:god|christ)\b|\bhonest\s+to\s+god\b/gi, 1],
   [new RegExp(`\\b(?:oh|good|sweet)\\s+lord${EXCL}`, "gi"), 1],
+  // Hell as a curse or an intensifier, not the place ("believe in hell", "heaven and hell").
+  [/\b(?:go|goes|going|went|gone)\s+to\s+hell\b|\b(?:burn|rot|see\s+you)\s+in\s+hell\b|\bto\s+hell\s+with\b|\bdamn\w*\s+(?:\w+\s+)?to\s+hell\b/gi, 2],
+  [/\b(?:the|a|one|as|like|from|all|bloody)\s+hell\b(?!'s\s+kitchen)/gi, 1],   // what the hell, a hell of, cold as hell
+  [/\bhell\s+(?:yeah|yes|no|of\s+a)\b/gi, 1],
+  [new RegExp(`${START}hell${EXCL}`, "gi"), 1],                   // "Hell!" / "Hell, I don't know."
 ];
 
 type Hit = { i: number; len: number; severity: number; category: string };

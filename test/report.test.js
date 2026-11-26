@@ -31,3 +31,17 @@ test("extension and server use the same report windows", () => {
   for (const [cat, [b, a]] of Object.entries(REPORT_WINDOW))
     assert.match(src, new RegExp(`${cat}: \\[${b}, ${a}\\]`), cat);
 });
+
+test("word picker: the chosen word's time, not the whole line", async () => {
+  const { wordSpan, spoken, reportSegment } = await import("../extension/src/report.js");
+  const line = { start: 100, end: 102, text: "[door slams] Get your ass over here, now." };
+  const text = spoken(line.text);
+  assert.equal(text, "Get your ass over here, now.");
+  const i = text.indexOf("ass");
+  const sp = wordSpan(line, i, 3);
+  assert.ok(sp.start >= 99.7 && sp.start < 100.6 && sp.end <= 101.2 && sp.end - sp.start >= 0.79, JSON.stringify(sp));
+  // An exact span replaces the blunt 9-second window.
+  const seg = reportSegment(110, "profanity", 1, sp);
+  assert.deepEqual([seg.start, seg.end, seg.severity, seg.mine], [sp.start, sp.end, 1, true]);
+  assert.equal(reportSegment(110, "profanity").start, 102);
+});
